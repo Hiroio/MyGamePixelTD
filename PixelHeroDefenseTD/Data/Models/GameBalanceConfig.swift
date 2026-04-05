@@ -71,9 +71,17 @@ enum GameBalanceConfig {
         level > 0 && level % 6 == 0
     }
 
+    /// Індекс щойно завершеної хвилі, після якої показується драфт **лише** з Special (після 3 слайм-хвиль).
+    static let specialOnlyPerkAfterCompletedWave: Int = 3
+
     /// Completed wave indexes that trigger perk choice UI.
     static func isPerkChoiceRound(_ waveNumber: Int) -> Bool {
-        if waveNumber == 3 { return true }
+        if waveNumber == specialOnlyPerkAfterCompletedWave { return true }
         return waveNumber >= 10 && waveNumber % 10 == 0
+    }
+
+    /// Після `specialOnlyPerkAfterCompletedWave` гравець обирає тільки Special-картки.
+    static func isSpecialOnlyPerkRound(_ completedWaveIndex: Int) -> Bool {
+        completedWaveIndex == specialOnlyPerkAfterCompletedWave
     }
 }

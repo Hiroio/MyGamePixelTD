@@ -30,6 +30,13 @@ struct UpgradeCardView: View {
 			 Text("\(upgrade.targetRole.rawValue.capitalized) Upgrade")
 				.font(.footnote)
 		  }
+		  
+		  HStack{
+			 let rarity = upgrade.rarity
+			 Text("\(rarity.rawValue.capitalized) Card")
+				.foregroundStyle(rarity.colorForCard)
+				.font(.caption)
+		  }
 		}
 		.fontDesign(.monospaced)
 		.foregroundStyle(.white.opacity(0.9))
@@ -39,13 +46,23 @@ struct UpgradeCardView: View {
 		  Image("Square2")
 			 .resizable()
 			 .opacity(09)
+			 .shadow(color: upgrade.rarity.colorForCard, radius: 10)
 		)
 		
     }
 }
 
 #Preview {
-    UpgradeCardView(upgrade: HeroUpgrade(name: "Thorns", description: "Return 10% damage back", icon: "Thorns", targetRole: .knight) {
-		$0.thornsPercentage += 0.1
-	 }, currentStacks: 1)
+    UpgradeCardView(
+        upgrade: HeroUpgrade(
+            name: "Thorns",
+            description: "Return 10% damage back",
+            icon: "Thorns",
+            targetRole: .knight,
+            rarity: .special,
+            mechanicFamily: .thorns,
+            apply: { $0.thornsPercentage += 0.1 }
+        ),
+        currentStacks: 1
+    )
 }

@@ -55,6 +55,9 @@ final class MainGameSceneViewModel: ObservableObject {
 
     let upgradeManager = UpgradeManager.shared
 
+    /// Одноразові **special** перки, уже взяті в цьому забігу — не показуються у драфті знову.
+    private var consumedSpecialUpgradeIDs: Set<String> = []
+
     var pendingEmptySlot: Int = 0
 
     var hasAnyHero: Bool { !heroesBySlot.isEmpty }
@@ -186,7 +189,13 @@ extension MainGameSceneViewModel {
         gameScene.playUpgradeEffect(at: slot)
 
         if GameBalanceConfig.isHeroPerkMilestoneLevel(model.stats.currentLevel) {
-			 upgrades = upgradeManager.getRandom(for: [model.role], upgraded: artifacts.contains(where: {$0.id == .magicLamp}), mageType: heroesBySlot.values.first(where: {$0.role == .mage})?.stats.mageType)
+            upgrades = upgradeManager.getRandom(
+                for: [model.role],
+                upgraded: artifacts.contains(where: { $0.id == .magicLamp }),
+                mageType: heroesBySlot.values.first(where: { $0.role == .mage })?.stats.mageType,
+                consumedSpecialIDs: consumedSpecialUpgradeIDs,
+                heroRoster: Array(heroesBySlot.values)
+            )
             if !upgrades.isEmpty {
                 withAnimation {
                     showUpgradeMenu = true
@@ -200,6 +209,9 @@ extension MainGameSceneViewModel {
         guard let slot = heroesBySlot.first(where: { $0.value.role == upgrade.targetRole })?.key,
               var model = heroesBySlot[slot] else { return }
         upgrade.applyToStats(&model.stats)
+        if upgrade.rarity == .special {
+            consumedSpecialUpgradeIDs.insert(upgrade.upgradeID)
+        }
         var copy = heroesBySlot
         copy[slot] = model
         heroesBySlot = copy
@@ -248,6 +260,8 @@ extension MainGameSceneViewModel {
         heroPanelRuntime = nil
         artifacts = []
         artifactChoices = []
+        upgrades = []
+        consumedSpecialUpgradeIDs = []
         gameScene.setCoinRewardMultiplier(1.0)
         gameScene.setBarricadeEnabled(false, maxHP: 200)
         gameScene.removeAllChildren()
@@ -292,7 +306,14 @@ extension MainGameSceneViewModel: GameHUDDelegate {
         guard !heroesBySlot.isEmpty else { return }
 
         let roles = Array(Set(heroesBySlot.values.map(\.role)))
-		let choices = upgradeManager.getRandom(for: roles, upgraded: artifacts.contains(where: {$0.id == .magicLamp}), mageType: heroesBySlot.values.first(where: {$0.role == .mage})?.stats.mageType)
+        let choices = upgradeManager.getRandom(
+            for: roles,
+            upgraded: artifacts.contains(where: { $0.id == .magicLamp }),
+            mageType: heroesBySlot.values.first(where: { $0.role == .mage })?.stats.mageType,
+            consumedSpecialIDs: consumedSpecialUpgradeIDs,
+            heroRoster: Array(heroesBySlot.values),
+            specialOnly: GameBalanceConfig.isSpecialOnlyPerkRound(completedWaveIndex)
+        )
         guard !choices.isEmpty else { return }
 
         upgrades = choices

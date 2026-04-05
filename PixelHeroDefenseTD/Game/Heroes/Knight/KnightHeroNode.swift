@@ -133,7 +133,8 @@ final class KnightHeroNode: SKNode, HeroUnitNode {
     /// Одна анімація атаки, якщо є хоча б одна ціль у радіусі.
     func tryAttack(whenInRange: Bool) -> Bool {
         guard whenInRange, isAlive, attackCooldown <= 0 else { return false }
-        let speed = max(0.2, unitModel.stats.attackSpeed * (isEnragedNow ? 1.5 : 1.0))
+        let enrageMult = unitModel.stats.isEnragedActive > 0 ? unitModel.stats.enrageAttackSpeedMultiplier : 1.0
+        let speed = max(0.2, unitModel.stats.attackSpeed * (isEnragedNow ? enrageMult : 1.0))
         attackCooldown = 1.0 / speed
         playAttackThenIdle()
         return true

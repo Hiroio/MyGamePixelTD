@@ -36,7 +36,11 @@ struct HeroCombatStats: Sendable {
   var lifestealPercentage: Double = 0.0 // Vampirism from artifact
   var critChance: Double = 0.0         // Encyclopedia from artifact
   var isEnragedActive: Double = 0.0    // Enraged механіка % hp коли втупає
+  /// Множник швидкості атаки під час люті (коли `isEnragedActive > 0` і HP нижче порогу).
+  var enrageAttackSpeedMultiplier: Double = 1.5
   var upgradeStacks: [String: Int] = [:]
+  /// Механіки, розблоковані **special** картками (для rare «+10% до механіки»).
+  var unlockedMechanics: Set<MechanicFamily> = []
   var mageType: MageType? = nil
   
   static func knightPrototype() -> HeroCombatStats {
@@ -121,15 +125,16 @@ extension UnitRole{
 }
 
 
-extension MageType{
-  var upgrade: HeroUpgrade{
-	 switch self {
-	 case .lightning:
-		HeroUpgrade.lightningMage
-	 case .fire:
-		HeroUpgrade.fireMage
-	 case .frost:
-		HeroUpgrade.frostMage
-	 }
-  }
+extension MageType {
+    /// Додаткові картки шляху мага в пулі (повторні path-special прибираються через `consumedSpecialIDs`).
+    var pathExtraUpgrades: [HeroUpgrade] {
+        switch self {
+        case .lightning:
+            [HeroUpgrade.lightningMage]
+        case .fire:
+            [HeroUpgrade.fireMage]
+        case .frost:
+            [HeroUpgrade.frostMage]
+        }
+    }
 }

@@ -45,7 +45,7 @@ struct UpgradeView: View {
 
 #Preview {
     UpgradeView(
-		upgrades: UpgradeManager.shared.getRandom(for: [.mage], upgraded: false, mageType: .frost),
+        upgrades: UpgradeManager.shared.getRandom(for: [.mage], upgraded: false, mageType: .frost, heroRoster: []),
         onPick: { _ in },
         stackCountFor: { _ in 0 }
     )
