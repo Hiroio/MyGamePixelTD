@@ -118,6 +118,12 @@ final class MageHeroNode: SKNode, HeroUnitNode {
         return false
     }
 
+    func restoreHP(_ amount: Double) {
+        guard isAlive, amount > 0 else { return }
+        currentHP = min(unitModel.stats.baseHP, currentHP + amount)
+        updateHPBar()
+    }
+
     func attack(with targets: [BaseEnemyNode], in scene: GameScene) {
         guard isAlive, !targets.isEmpty, attackCooldown <= 0 else { return }
         attackCooldown = 1.0 / max(0.2, unitModel.stats.attackSpeed)

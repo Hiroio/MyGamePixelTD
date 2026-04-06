@@ -119,6 +119,12 @@ final class ArcherHeroNode: SKNode, HeroUnitNode {
         return false
     }
 
+    func restoreHP(_ amount: Double) {
+        guard isAlive, amount > 0 else { return }
+        currentHP = min(unitModel.stats.baseHP, currentHP + amount)
+        updateHPBar()
+    }
+
     func playUpgradeFeedback() {
         // Поки апгрейди не додані в логіку, лишаємо тільки візуальний нудж.
         removeAction(forKey: "upgradeNudge")

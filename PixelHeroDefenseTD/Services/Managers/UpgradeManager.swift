@@ -13,6 +13,8 @@ final class UpgradeManager {
     var archerUpgrade: [HeroUpgrade] { HeroUpgrade.archerUpgrades }
     var knightUpgrade: [HeroUpgrade] { HeroUpgrade.knightUpgrades }
     var mageUpgrade: [HeroUpgrade] { HeroUpgrade.mageUpgrades }
+    var priestUpgrade: [HeroUpgrade] { HeroUpgrade.priestUpgrades }
+    var lancerUpgrade: [HeroUpgrade] { HeroUpgrade.lancerUpgrades }
 
     /// Draft perk cards. За замовчуванням намагається включити одну **basic**; `specialOnly` — тільки **special** (без basic/rare).
     /// Special з `consumedSpecialIDs` випадають; rare «масштаб механіки» у звичайному драфті — лише якщо механіка доступна герою.
@@ -44,6 +46,12 @@ final class UpgradeManager {
                     HeroUpgrade.frostMage,
                 ])
             }
+        }
+        if roles.contains(.priest) {
+            allAvailable.append(contentsOf: priestUpgrade)
+        }
+        if roles.contains(.lancer) {
+            allAvailable.append(contentsOf: lancerUpgrade)
         }
 
         let pool = allAvailable.filter { card in

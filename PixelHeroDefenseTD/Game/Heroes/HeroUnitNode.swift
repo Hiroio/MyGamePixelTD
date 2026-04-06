@@ -22,6 +22,8 @@ protocol HeroUnitNode: AnyObject {
 
     func applyModel(_ model: HeroUnitModel, healToFull: Bool)
     @discardableResult func applyDamage(_ value: Double) -> Bool
+    /// Звичайне відновлення HP (до поточного max з моделі).
+    func restoreHP(_ amount: Double)
 
     func playUpgradeFeedback()
 

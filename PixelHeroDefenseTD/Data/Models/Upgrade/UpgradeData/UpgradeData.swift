@@ -67,6 +67,16 @@ private enum CoreStatLine: CaseIterable {
         case (.hp, .mage): return "ThirdEye"
         case (.defense, .mage): return "HeavyArmor"
         case (.range, .mage): return "ThirdEye"
+        case (.damage, .priest): return "Staff"
+        case (.attackSpeed, .priest): return "Staff"
+        case (.hp, .priest): return "ThirdEye"
+        case (.defense, .priest): return "HeavyArmor"
+        case (.range, .priest): return "ThirdEye"
+		  case (.damage, .lancer): return "Berserk"
+		  case (.attackSpeed, .lancer): return "Bouler"
+		  case (.hp, .lancer): return "Cleve"
+		  case (.defense, .lancer): return "HeavyArmor"
+		  case (.range, .lancer): return "LongBow"
         }
     }
 }
@@ -76,6 +86,8 @@ private func roleTitle(_ role: UnitRole) -> String {
     case .knight: return "Knight"
     case .archer: return "Archer"
     case .mage: return "Mage"
+	 case .priest: return "Priest"
+	 case .lancer: return "Lancer"
     }
 }
 
@@ -119,6 +131,14 @@ extension HeroUpgrade {
 
     static var mageUpgrades: [HeroUpgrade] {
         coreStatUpgrades(for: .mage) + mageRareMechanicScalers
+    }
+
+    static var priestUpgrades: [HeroUpgrade] {
+        coreStatUpgrades(for: .priest) + priestSpecials + priestRareMechanicScalers
+    }
+
+    static var lancerUpgrades: [HeroUpgrade] {
+        coreStatUpgrades(for: .lancer) + lancerSpecials + lancerRareMechanicScalers
     }
 
     // MARK: Knight — special
@@ -454,6 +474,327 @@ extension HeroUpgrade {
             stepDescription: "Next: +10% slow again.",
             apply: { $0.slownessEffect *= 1.1 },
             step: { $0.slownessEffect *= 1.1 }
+        ),
+    ]
+
+    // MARK: Priest
+
+    private static let priestSpecials: [HeroUpgrade] = [
+        HeroUpgrade(
+            name: "Blessed Mending",
+            description: "Heal injured allies in range for 10 HP/s.",
+            icon: "BlessedMending",
+            targetRole: .priest,
+            rarity: .special,
+            mechanicFamily: .priestHeal,
+            apply: { s in
+                if s.priestHealPerSecond <= 0 { s.priestHealPerSecond = 10 }
+            },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "Bloodthirst Aura",
+            description: "Drain: heal for 15% of burn damage dealt.",
+            icon: "BloodthirstAura",
+            targetRole: .priest,
+            rarity: .special,
+            mechanicFamily: .priestVamp,
+            apply: { $0.lifestealPercentage += 0.15 },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "Paladin's Vow",
+            description: "+30 max HP and +30% block (max 75%).",
+            icon: "PaladinVow",
+            targetRole: .priest,
+            rarity: .special,
+            mechanicFamily: .priestPaladin,
+            apply: {
+                $0.baseHP += 30
+                $0.damageReduction = min(0.75, $0.damageReduction + 0.3)
+            },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "Holy Ground",
+            description: "Enemies in your radius are slowed by 20%.",
+            icon: "HolyGround",
+            targetRole: .priest,
+            rarity: .special,
+            mechanicFamily: .priestHolyGround,
+            apply: {
+                if $0.priestHolyGroundSlow <= 0 {
+                    $0.priestHolyGroundSlow = 0.2
+                } else {
+                    $0.priestHolyGroundSlow = max($0.priestHolyGroundSlow, 0.2)
+                }
+            },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "Holy Aegis",
+            description: "Each wave, front-row allies gain shield = 25% of their max HP.",
+            icon: "HolyAegis",
+            targetRole: .priest,
+            rarity: .special,
+            mechanicFamily: .priestHolyShield,
+            apply: {
+                if $0.priestHolyShieldPercent <= 0 {
+                    $0.priestHolyShieldPercent = 0.25
+                } else {
+                    $0.priestHolyShieldPercent = max($0.priestHolyShieldPercent, 0.25)
+                }
+            },
+            step: { _ in }
+        ),
+    ]
+
+    private static let priestRareMechanicScalers: [HeroUpgrade] = [
+        HeroUpgrade(
+            name: "Mending — Brighter",
+            description: "Healing rate +10%.",
+            icon: "BlessedMending",
+            targetRole: .priest,
+            rarity: .rare,
+            mechanicFamily: .priestHeal,
+            stepDescription: "Next: +10% healing again.",
+            apply: { s in guard s.priestHealPerSecond > 0 else { return }; s.priestHealPerSecond *= 1.1 },
+            step: { s in guard s.priestHealPerSecond > 0 else { return }; s.priestHealPerSecond *= 1.1 }
+        ),
+        HeroUpgrade(
+            name: "Drain — Deeper",
+            description: "Vampirism +10%.",
+            icon: "BloodthirstAura",
+            targetRole: .priest,
+            rarity: .rare,
+            mechanicFamily: .priestVamp,
+            stepDescription: "Next: +10% vamp again.",
+            apply: { s in guard s.lifestealPercentage > 0 else { return }; s.lifestealPercentage *= 1.1 },
+            step: { s in guard s.lifestealPercentage > 0 else { return }; s.lifestealPercentage *= 1.1 }
+        ),
+        HeroUpgrade(
+            name: "Paladin — Steadfast",
+            description: "+5% max HP and +5% block (max 75%).",
+            icon: "PaladinVow",
+            targetRole: .priest,
+            rarity: .rare,
+            mechanicFamily: .priestPaladin,
+            stepDescription: "Next: +5% HP & block again.",
+            apply: {
+                $0.baseHP *= 1.05
+                $0.damageReduction = min(0.75, $0.damageReduction + 0.05)
+            },
+            step: {
+                $0.baseHP *= 1.05
+                $0.damageReduction = min(0.75, $0.damageReduction + 0.05)
+            }
+        ),
+        HeroUpgrade(
+            name: "Holy Ground — Heavier",
+            description: "Slow in radius +5%.",
+            icon: "HolyGround",
+            targetRole: .priest,
+            rarity: .rare,
+            mechanicFamily: .priestHolyGround,
+            stepDescription: "Next: +5% slow again.",
+            apply: {
+                guard $0.priestHolyGroundSlow > 0 else { return }
+                $0.priestHolyGroundSlow = min(0.85, $0.priestHolyGroundSlow + 0.05)
+            },
+            step: {
+                guard $0.priestHolyGroundSlow > 0 else { return }
+                $0.priestHolyGroundSlow = min(0.85, $0.priestHolyGroundSlow + 0.05)
+            }
+        ),
+        HeroUpgrade(
+            name: "Aegis — Reinforced",
+            description: "Shield strength +5% (max 45%).",
+            icon: "HolyAegis",
+            targetRole: .priest,
+            rarity: .rare,
+            mechanicFamily: .priestHolyShield,
+            stepDescription: "Next: +5% shield cap again.",
+            apply: {
+                guard $0.priestHolyShieldPercent > 0 else { return }
+                $0.priestHolyShieldPercent = min(0.45, $0.priestHolyShieldPercent + 0.05)
+            },
+            step: {
+                guard $0.priestHolyShieldPercent > 0 else { return }
+                $0.priestHolyShieldPercent = min(0.45, $0.priestHolyShieldPercent + 0.05)
+            }
+        ),
+    ]
+
+    // MARK: Lancer
+
+    private static let lancerSpecials: [HeroUpgrade] = [
+        HeroUpgrade(
+            name: "Piercing Strike",
+            description: "Lance always crits: +50% damage. (Uses crit damage bonus, not random crit.)",
+            icon: "PiercingStrike",
+            targetRole: .lancer,
+            rarity: .special,
+            mechanicFamily: .lancerCrit,
+            apply: { $0.lancerCritDamageBonus = max($0.lancerCritDamageBonus, 0.5) },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "Cavalry Ram",
+            description: "Lance charges through the target. Extra reach 12, −30% atk speed, +1 knockback. Enemies behind take −20% dmg per hit in line.",
+            icon: "CavalryRam",
+            targetRole: .lancer,
+            rarity: .special,
+            mechanicFamily: .lancerRam,
+            apply: {
+                $0.splashRadius = max($0.splashRadius, 12)
+                $0.attackSpeed *= 0.7
+                $0.knockback += 1.0
+            },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "War Mount",
+            description: "Throw lances at 2 enemies per volley.",
+            icon: "LancerHelmet",
+            targetRole: .lancer,
+            rarity: .special,
+            mechanicFamily: .lancerMount,
+            apply: { $0.enemyTarget = max($0.enemyTarget, 2) },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "Ricochet Lance",
+            description: "After a hit, bounces to +2 enemies. −10% damage (from this path).",
+            icon: "RicochetLance",
+            targetRole: .lancer,
+            rarity: .special,
+            mechanicFamily: .lancerRicochet,
+            apply: {
+                $0.bounceCount += 2
+                $0.baseDamage *= 0.9
+            },
+            step: { _ in }
+        ),
+        HeroUpgrade(
+            name: "Steel Hooves",
+            description: "All enemies are slowed by 15%.",
+            icon: "SteelHooves",
+            targetRole: .lancer,
+            rarity: .special,
+            mechanicFamily: .lancerSteelHooves,
+            apply: {
+                if $0.lancerGlobalSlowPercent <= 0 {
+                    $0.lancerGlobalSlowPercent = 0.15
+                } else {
+                    $0.lancerGlobalSlowPercent = max($0.lancerGlobalSlowPercent, 0.15)
+                }
+            },
+            step: { _ in }
+        ),
+    ]
+
+    private static let lancerRareMechanicScalers: [HeroUpgrade] = [
+        HeroUpgrade(
+            name: "Piercing — Deeper Wound",
+            description: "Crit damage bonus +5%.",
+            icon: "PiercingStrike",
+            targetRole: .lancer,
+            rarity: .rare,
+            mechanicFamily: .lancerCrit,
+            stepDescription: "Next: +5% crit damage again.",
+            apply: {
+                guard $0.lancerCritDamageBonus > 0 else { return }
+                $0.lancerCritDamageBonus += 0.05
+            },
+            step: {
+                guard $0.lancerCritDamageBonus > 0 else { return }
+                $0.lancerCritDamageBonus += 0.05
+            }
+        ),
+        HeroUpgrade(
+            name: "Ram — Longer Run",
+            description: "Charge distance +5 (logical units).",
+            icon: "CavalryRam",
+            targetRole: .lancer,
+            rarity: .rare,
+            mechanicFamily: .lancerRam,
+            stepDescription: "Next: +5 reach again.",
+            apply: {
+                guard $0.unlockedMechanics.contains(.lancerRam) else { return }
+                $0.splashRadius += 5
+            },
+            step: {
+                guard $0.unlockedMechanics.contains(.lancerRam) else { return }
+                $0.splashRadius += 5
+            }
+        ),
+        HeroUpgrade(
+            name: "Ram — Heavier Impact",
+            description: "Knockback +10%.",
+            icon: "CavalryRam",
+            targetRole: .lancer,
+            rarity: .rare,
+            mechanicFamily: .lancerRam,
+            stepDescription: "Next: +10% knockback again.",
+            apply: {
+                guard $0.unlockedMechanics.contains(.lancerRam) else { return }
+                $0.knockback *= 1.1
+            },
+            step: {
+                guard $0.unlockedMechanics.contains(.lancerRam) else { return }
+                $0.knockback *= 1.1
+            }
+        ),
+        HeroUpgrade(
+            name: "Mount — Extra Rider",
+            description: "+1 lance target per volley.",
+            icon: "LancerHelmet",
+            targetRole: .lancer,
+            rarity: .rare,
+            mechanicFamily: .lancerMount,
+            stepDescription: "Next: +1 target again.",
+            apply: {
+                guard $0.unlockedMechanics.contains(.lancerMount), $0.enemyTarget >= 2 else { return }
+                $0.enemyTarget += 1
+            },
+            step: {
+                guard $0.unlockedMechanics.contains(.lancerMount), $0.enemyTarget >= 2 else { return }
+                $0.enemyTarget += 1
+            }
+        ),
+        HeroUpgrade(
+            name: "Ricochet — Extra Link",
+            description: "+1 bounce.",
+            icon: "ChainShot",
+            targetRole: .lancer,
+            rarity: .rare,
+            mechanicFamily: .lancerRicochet,
+            stepDescription: "Next: +1 bounce again.",
+            apply: {
+                guard $0.unlockedMechanics.contains(.lancerRicochet), $0.bounceCount > 0 else { return }
+                $0.bounceCount += 1
+            },
+            step: {
+                guard $0.unlockedMechanics.contains(.lancerRicochet), $0.bounceCount > 0 else { return }
+                $0.bounceCount += 1
+            }
+        ),
+        HeroUpgrade(
+            name: "Steel Hooves — Colder Iron",
+            description: "Global slow strength +10%.",
+            icon: "SteelHooves",
+            targetRole: .lancer,
+            rarity: .rare,
+            mechanicFamily: .lancerSteelHooves,
+            stepDescription: "Next: +10% slow again.",
+            apply: {
+                guard $0.lancerGlobalSlowPercent > 0 else { return }
+                $0.lancerGlobalSlowPercent *= 1.1
+            },
+            step: {
+                guard $0.lancerGlobalSlowPercent > 0 else { return }
+                $0.lancerGlobalSlowPercent *= 1.1
+            }
         ),
     ]
 }

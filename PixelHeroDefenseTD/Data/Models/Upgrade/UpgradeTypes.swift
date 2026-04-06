@@ -41,4 +41,16 @@ enum MechanicFamily: String, Sendable, Hashable {
     case mageLightning
     case mageFire
     case mageFrost
+
+    case priestHeal
+    case priestVamp
+    case priestPaladin
+    case priestHolyGround
+    case priestHolyShield
+
+    case lancerCrit
+    case lancerRam
+    case lancerMount
+    case lancerRicochet
+    case lancerSteelHooves
 }

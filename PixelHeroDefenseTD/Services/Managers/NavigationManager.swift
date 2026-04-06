@@ -16,3 +16,5 @@ class NavigationManager: ObservableObject{
 enum MainScreens{
   case start, game
 }
+
+

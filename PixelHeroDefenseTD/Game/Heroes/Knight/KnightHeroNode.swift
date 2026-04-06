@@ -154,6 +154,12 @@ final class KnightHeroNode: SKNode, HeroUnitNode {
         return false
     }
 
+    func restoreHP(_ amount: Double) {
+        guard isAlive, amount > 0 else { return }
+        currentHP = min(unitModel.stats.baseHP, currentHP + amount)
+        updateHPBar()
+    }
+
     private func updateHPBar() {
         let maxHP = max(1, unitModel.stats.baseHP)
         hpBar.setProgress(CGFloat(currentHP / maxHP))

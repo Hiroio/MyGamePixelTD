@@ -10,31 +10,24 @@ import SwiftUI
 struct SelectHudView: View {
   let heroInRoster: (UnitRole) -> Bool
   let assignHero: (UnitRole) -> ()
-    var body: some View {
+  var body: some View {
+	 ScrollView{
 		VStack{
-		  Button{
-			 assignHero(.knight)
-		  }label: {
-			 RecruitCard(heroUnit: .knight, inRoster: heroInRoster(.knight))
+		  ForEach(UnitRole.allCases, id: \.self){item in
+			 let inRoster = heroInRoster(item)
+			 Button{
+				assignHero(item)
+			 }label: {
+				RecruitCard(heroUnit: item, inRoster: inRoster)
+			 }
+			 .opacity(inRoster ? 0.6 : 1)
+			 .disabled(inRoster)
 		  }
-		  .opacity(heroInRoster(.knight) ? 0.6 : 1)
-		  Button{
-			 assignHero(.archer)
-		  }label: {
-			 RecruitCard(heroUnit: .archer, inRoster: heroInRoster(.archer))
-		  }
-		  .opacity(heroInRoster(.archer) ? 0.6 : 1)
-		  Button{
-			 assignHero(.mage)
-		  }label: {
-			 RecruitCard(heroUnit: .mage, inRoster: heroInRoster(.mage))
-		  }
-		  .opacity(heroInRoster(.mage) ? 0.6 : 1)
-		  .disabled(heroInRoster(.mage))
 		}
 		.fontDesign(.monospaced)
 		.padding()
-    }
+	 }
+  }
 }
 
 #Preview {
@@ -49,11 +42,14 @@ func RecruitCard(heroUnit: UnitRole, inRoster: Bool) -> some View{
 		ZStack{
 		  Image(heroUnit.upgradeIcon)
 			 .resizable()
-		  Image(heroUnit.upgradeIcon)
-			 .resizable()
-			 .rotation3DEffect(Angle(degrees: 270), axis: (x: 0, y: 0, z: 1))
+			 .scaleEffect(1)
+//		  Image(heroUnit.upgradeIcon)
+//			 .resizable()
+//			 .rotationEffect(Angle(degrees: 70))
+//			 .scaleEffect(-1.1)
 		  Image(heroUnit.helmetIcon)
 			 .resizable()
+			 .offset(x: -40)
 		}
 		.frame(width: 100, height: 100)
 	 }

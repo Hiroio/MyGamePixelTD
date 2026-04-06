@@ -17,6 +17,10 @@ final class GameScene: SKScene {
     private var barricadeMaxHP: Double = 200
     private var barricadeCurrentHP: Double = 0
     private var barricadeNode: SKSpriteNode?
+    /// Щит святого жреця для слотів 0…2; знімається та наклається на старт кожної хвилі.
+    private var holyShieldBySlot: [Int: Double] = [:]
+    private var holyShieldMaxBySlot: [Int: Double] = [:]
+    private var holyShieldVisualBySlot: [Int: HolyShieldHeroVisual] = [:]
 
     private var hudStatsSlot: Int?
     private var highlightedSlot: Int?
@@ -60,6 +64,9 @@ final class GameScene: SKScene {
         barricadeNode = nil
         barricadeCurrentHP = 0
         barricadeEnabled = false
+        holyShieldBySlot = [:]
+        holyShieldMaxBySlot = [:]
+        holyShieldVisualBySlot.removeAll()
         coinRewardMultiplier = 1.0
         hudStatsSlot = nil
         highlightedSlot = nil
@@ -114,18 +121,27 @@ final class GameScene: SKScene {
                         newNode = ArcherHeroNode(model: model)
                     case .mage:
                         newNode = MageHeroNode(model: model)
+						  case .priest:
+							 newNode = PriestHeroNode(model: model)
+						  case .lancer:
+							 newNode = LancerHeroNode(model: model)
+//							 TO ADD
                     }
                     newNode.zPosition = 30
                     heroBySlot[i] = newNode
                     addChild(newNode)
                 }
             } else if let node = heroBySlot[i] {
+                holyShieldVisualBySlot.removeValue(forKey: i)
                 node.removeFromParent()
                 heroBySlot.removeValue(forKey: i)
+                holyShieldBySlot.removeValue(forKey: i)
+                holyShieldMaxBySlot.removeValue(forKey: i)
             }
         }
         layoutHeroesAndFrames()
         refreshPanelAttackRangeOverlay()
+        updateHolyShieldPresentations()
     }
 
     func applyHeroModel(at slot: Int, model: HeroUnitModel, healToFull: Bool) {
@@ -184,6 +200,8 @@ final class GameScene: SKScene {
         if barricadeEnabled {
             ensureBarricadeExists(restoreHP: true)
         }
+        refreshHolyShieldsForWaveStart()
+        updateHolyShieldPresentations()
         pushWaveStateToHUD()
         refreshSlotFramesVisibility()
     }
@@ -301,6 +319,100 @@ final class GameScene: SKScene {
         barricadeCurrentHP = 0
         guard let node = barricadeNode else { return }
         node.run(.sequence([.fadeOut(withDuration: 0.2), .removeFromParent()]))
+    }
+
+    private func heroSlot(for hero: SKNode & HeroUnitNode) -> Int? {
+        heroBySlot.first { $0.value === hero }?.key
+    }
+
+    /// Спочатку знімається святий щит (слот), потім звичайний `applyDamage`.
+    func applyIncomingDamageToHero(_ hero: SKNode & HeroUnitNode, rawDamage: Double) {
+        var incoming = max(0, rawDamage)
+        if let slot = heroSlot(for: hero), let sh = holyShieldBySlot[slot], sh > 0 {
+            let absorb = min(sh, incoming)
+            holyShieldBySlot[slot] = sh - absorb
+            incoming -= absorb
+        }
+        guard incoming > 0 else { return }
+        _ = hero.applyDamage(incoming)
+    }
+
+    /// Передній ряд слотів 0…2: щит = max HP союзника × найкращий відсоток від жреців.
+    private func refreshHolyShieldsForWaveStart() {
+        for i in 0..<SceneLayout.heroSlotCount {
+            holyShieldBySlot[i] = 0
+            holyShieldMaxBySlot[i] = 0
+        }
+        var bestPercent: Double = 0
+        for (_, h) in heroBySlot where h.isAlive {
+            guard h.unitModel.role == .priest else { continue }
+            let p = h.unitModel.stats.priestHolyShieldPercent
+            if p > 0 { bestPercent = max(bestPercent, p) }
+        }
+        guard bestPercent > 0 else { return }
+        for front in 0..<3 {
+            guard let ally = heroBySlot[front], ally.isAlive else { continue }
+            if ally.unitModel.role == .priest { continue }
+            let amt = ally.unitModel.stats.baseHP * bestPercent
+            holyShieldBySlot[front] = amt
+            holyShieldMaxBySlot[front] = amt
+        }
+    }
+
+    private func updateHolyShieldPresentations() {
+        guard size.height > 1 else { return }
+        let displayScale = SceneLayout.heroDisplayScale(for: size.height, logicalFrame: 100)
+        var seenSlots: Set<Int> = []
+
+        for (slot, hero) in heroBySlot {
+            seenSlots.insert(slot)
+            let cur = holyShieldBySlot[slot] ?? 0
+            let maxSh = holyShieldMaxBySlot[slot] ?? 0
+            let shouldShow = hero.isAlive && cur > 0 && maxSh > 0
+
+            if !shouldShow {
+                if let v = holyShieldVisualBySlot.removeValue(forKey: slot) {
+                    v.removeFromParent()
+                }
+                continue
+            }
+
+            let visual: HolyShieldHeroVisual
+            if let existing = holyShieldVisualBySlot[slot] {
+                visual = existing
+            } else {
+                let v = HolyShieldHeroVisual()
+                hero.addChild(v)
+                holyShieldVisualBySlot[slot] = v
+                visual = v
+            }
+            visual.updatePresentation(currentShield: cur, maxShield: maxSh, displayScale: displayScale)
+        }
+
+        for slot in Array(holyShieldVisualBySlot.keys) where !seenSlots.contains(slot) || heroBySlot[slot] == nil {
+            holyShieldVisualBySlot.removeValue(forKey: slot)?.removeFromParent()
+        }
+    }
+
+    /// Для пасивок жреця (хіл союзників).
+    func forEachAllyHero(_ body: (SKNode & HeroUnitNode) -> Void) {
+        for (_, h) in heroBySlot where h.isAlive {
+            body(h)
+        }
+    }
+
+    /// Стальові копита лансерів: найсильніший відсоток slow накладається на усіх ворогів під час хвилі.
+    private func applySteelHoovesSlowIfNeeded() {
+        guard isWaveRunning else { return }
+        var maxSlow = 0.0
+        for h in heroBySlot.values where h.isAlive && h.unitModel.role == .lancer {
+            maxSlow = max(maxSlow, h.unitModel.stats.lancerGlobalSlowPercent)
+        }
+        guard maxSlow > 0 else { return }
+        let p = min(0.85, maxSlow)
+        for enemy in enemies where enemy.isAlive {
+            enemy.applySlow(percent: p, duration: 0.4)
+        }
     }
 
     private func spawnEnemy() {
@@ -448,6 +560,8 @@ final class GameScene: SKScene {
 
         let reachMult = SceneLayout.combatReachMultiplier(for: size.height)
 
+        applySteelHoovesSlowIfNeeded()
+
         for enemy in enemies {
             enemy.updateTick(deltaTime: dt)
             if !enemy.isAlive { continue }
@@ -473,8 +587,8 @@ final class GameScene: SKScene {
                     sceneSize: size,
                     nearestHero: targetHero,
                     reachMult: reachMult,
-                    applyMeleeHit: { hero, damage in
-                        _ = hero.applyDamage(damage)
+                    applyMeleeHit: { [weak self] hero, damage in
+                        self?.applyIncomingDamageToHero(hero, rawDamage: damage)
                         let thornsPercent = max(0, hero.unitModel.stats.thornsPercentage)
                         if thornsPercent > 0 {
                             let reflected = damage * thornsPercent
@@ -504,7 +618,7 @@ final class GameScene: SKScene {
             let dist = hypot(enemy.position.x - approachPoint.x, enemy.position.y - approachPoint.y)
             let enemyInRange = dist <= (enemy.combatRange * reachMult)
             if enemy.tryAttack(whenInRange: enemyInRange) {
-                _ = targetHero.applyDamage(enemy.damagePerHit)
+                applyIncomingDamageToHero(targetHero, rawDamage: enemy.damagePerHit)
                 let thornsPercent = max(0, targetHero.unitModel.stats.thornsPercentage)
                 if thornsPercent > 0 {
                     let reflected = enemy.damagePerHit * thornsPercent
@@ -531,7 +645,12 @@ final class GameScene: SKScene {
                     return da < db
                 }
             let maxTargets = hero.maxEnemyTargets
-            let targets = Array(inMeleeRange.prefix(maxTargets))
+            let targets: [BaseEnemyNode]
+            if hero.unitModel.role == .priest {
+                targets = inMeleeRange
+            } else {
+                targets = Array(inMeleeRange.prefix(maxTargets))
+            }
             hero.attack(with: targets, in: self)
         }
 
@@ -547,6 +666,8 @@ final class GameScene: SKScene {
         for enemy in toRemove {
             enemy.run(.sequence([.wait(forDuration: 0.35), .removeFromParent()]))
         }
+
+        updateHolyShieldPresentations()
 
         pushHeroPanelToHUD()
         pushWaveEnemyProgress()
