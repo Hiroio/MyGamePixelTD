@@ -38,7 +38,9 @@ struct StartScreenView: View {
 			 .frame(maxWidth: .infinity)
 			 .overlay(
 				HStack{
-				  Button{}label: {
+				  Button{
+					 NavigationManager.shared.secondaryScreens = .compendium
+				  }label: {
 					 Image("Encyclopedia")
 						.shadow(radius: 2, x: -3, y: 3)
 				  }

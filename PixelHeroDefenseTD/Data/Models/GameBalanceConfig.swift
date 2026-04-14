@@ -37,12 +37,10 @@ enum GameBalanceConfig {
     static func enemyHPMultiplier(forWave wave: Int) -> Double {
         1.0 + 0.25 * Double(max(0, wave - 1))
     }
-
     /// Flat damage bonus added to baseDamage.
     static func enemyDamageBonus(forWave wave: Int) -> Double {
         0.20 * Double(max(0, wave - 1))
     }
-
     /// Flat moveSpeed bonus added per wave.
     static func enemyMoveSpeedBonus(forWave wave: Int) -> Double {
         0.025 * Double(max(0, wave - 1))
@@ -54,34 +52,33 @@ enum GameBalanceConfig {
     static let heroHireCost: Int = 50
 
     // MARK: - Hero Upgrades
-
     static let heroUpgradeBaseCost: Int = 25
-
     /// Next level cost formula: base * currentLevel.
     static func heroUpgradeCost(currentLevel: Int) -> Int {
         max(1, heroUpgradeBaseCost) * max(1, currentLevel)
     }
-
-    static let heroAttackSpeedBonusPerLevel: Double = 0.07
+    static let heroAttackSpeedBonusPerLevel: Double = 0.05
     static let heroHPBonusRatioPerLevel: Double = 0.15
-    static let heroDamageBonusRatioPerLevel: Double = 0.2
-
-    /// Hero levels that trigger perk choice.
+    static let heroDamageBonusRatioPerLevel: Double = 0.15
+    /// Рівні, після яких драфт rare/special зі зниженим шансом special (як хвилі кратні 6).
     static func isHeroPerkMilestoneLevel(_ level: Int) -> Bool {
-        level > 0 && level % 6 == 0
+        level > 0 && level % 5 == 0
     }
 
-    /// Індекс щойно завершеної хвилі, після якої показується драфт **лише** з Special (після 3 слайм-хвиль).
+    /// Після цієї завершеної хвилі драфт тільки з Special (якщо лишились — інакше rare / standard).
     static let specialOnlyPerkAfterCompletedWave: Int = 3
 
-    /// Completed wave indexes that trigger perk choice UI.
-    static func isPerkChoiceRound(_ waveNumber: Int) -> Bool {
-        if waveNumber == specialOnlyPerkAfterCompletedWave { return true }
-        return waveNumber >= 10 && waveNumber % 10 == 0
+    /// Завершена хвиля кратна 6 і не бос (5/10/15/20) → змішаний драфт rare + special.
+    static func isMixedRareSpecialPerkRound(_ completedWaveIndex: Int) -> Bool {
+        guard completedWaveIndex % 6 == 0 else { return false }
+        return completedWaveIndex % 10 != 0
     }
-
-    /// Після `specialOnlyPerkAfterCompletedWave` гравець обирає тільки Special-картки.
-    static func isSpecialOnlyPerkRound(_ completedWaveIndex: Int) -> Bool {
-        completedWaveIndex == specialOnlyPerkAfterCompletedWave
+    /// Ймовірність обрати special у змішаному драфті (на кожну картку окремо).
+    static let perkMixedSpecialChance: Double = 0.22
+    /// Монети за пропуск драфту перку: `max(completedWave * 4, 15)`.
+    static func perkSkipCoinReward(completedWaveIndex: Int) -> Int {
+        max(completedWaveIndex * 5, 15)
     }
+    /// Скільки реролів драфту за одне вікно (0 після використання).
+    static let perkDraftRerollsPerWindow: Int = 1
 }

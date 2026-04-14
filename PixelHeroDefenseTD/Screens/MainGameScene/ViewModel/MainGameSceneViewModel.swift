@@ -40,6 +40,13 @@ final class MainGameSceneViewModel: ObservableObject {
     @Published var currentBossHP: Double = 0
 
     @Published var showLoseScreen: Bool = false
+    @Published var showRunVictoryScreen: Bool = false
+
+    /// Після перемоги на30-й хвилі — дозволити хвилі 31+ без «фіналу».
+    @Published private(set) var endlessModeActive: Bool = false
+
+    @Published var perkRerollsRemaining: Int = 0
+    @Published var perkSkipRewardCoins: Int = 0
 
     /// Слот, для якого відкрито HUD (герой у цьому слоті).
     @Published var panelSlot: Int?
@@ -57,6 +64,10 @@ final class MainGameSceneViewModel: ObservableObject {
 
     /// Одноразові **special** перки, уже взяті в цьому забігу — не показуються у драфті знову.
     private var consumedSpecialUpgradeIDs: Set<String> = []
+
+    private var perkDraftMode: PerkDraftMode = .standard
+    private var perkDraftRoles: [UnitRole]? = nil
+    private var pendingVictoryAfterArtifact: Bool = false
 
     var pendingEmptySlot: Int = 0
 
@@ -126,6 +137,7 @@ extension MainGameSceneViewModel {
      withAnimation {
         showArtifactMenu = false
      }
+     resolvePendingVictoryIfNeeded()
   }
 
     var heroForPanel: HeroUnitModel? {
@@ -150,6 +162,7 @@ extension MainGameSceneViewModel {
 
   func assignHeroToPendingSlot(hero: UnitRole){
 	 guard !isWaveRunning else { return }
+	 guard !hasHeroInRoster(hero: hero) else { return }
 	 guard coins >= GameBalanceConfig.heroHireCost else { return }
 	 let slot = min(max(pendingEmptySlot, 0), SceneLayout.heroSlotCount - 1)
 	 coins -= GameBalanceConfig.heroHireCost
@@ -189,18 +202,12 @@ extension MainGameSceneViewModel {
         gameScene.playUpgradeEffect(at: slot)
 
         if GameBalanceConfig.isHeroPerkMilestoneLevel(model.stats.currentLevel) {
-            upgrades = upgradeManager.getRandom(
-                for: [model.role],
-                upgraded: artifacts.contains(where: { $0.id == .magicLamp }),
-                mageType: heroesBySlot.values.first(where: { $0.role == .mage })?.stats.mageType,
-                consumedSpecialIDs: consumedSpecialUpgradeIDs,
-                heroRoster: Array(heroesBySlot.values)
+            let lastCompleted = max(0, waveNumber - 1)
+            presentPerkDraft(
+                mode: .mixedRareSpecial(specialChance: GameBalanceConfig.perkMixedSpecialChance),
+                skipRewardCompletedWave: lastCompleted,
+                roles: [model.role]
             )
-            if !upgrades.isEmpty {
-                withAnimation {
-                    showUpgradeMenu = true
-                }
-            }
         }
     }
 
@@ -216,7 +223,10 @@ extension MainGameSceneViewModel {
         copy[slot] = model
         heroesBySlot = copy
         gameScene.applyHeroModel(at: slot, model: model, healToFull: false)
-        showUpgradeMenu = false
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.92)) {
+            showUpgradeMenu = false
+        }
+        resetPerkDraftPresentation()
     }
 
     /// Скільки разів цей апгрейд уже взятий героєм відповідної ролі.
@@ -252,6 +262,11 @@ extension MainGameSceneViewModel {
         showUpgradeMenu = false
         showArtifactMenu = false
         showLoseScreen = false
+        showRunVictoryScreen = false
+        endlessModeActive = false
+        pendingVictoryAfterArtifact = false
+        perkRerollsRemaining = 0
+        perkSkipRewardCoins = 0
         waveEnemiesRemaining = 0
         waveEnemiesTotal = 0
         totalBossHP = 0
@@ -262,6 +277,8 @@ extension MainGameSceneViewModel {
         artifactChoices = []
         upgrades = []
         consumedSpecialUpgradeIDs = []
+        perkDraftMode = .standard
+        perkDraftRoles = nil
         gameScene.setCoinRewardMultiplier(1.0)
         gameScene.setBarricadeEnabled(false, maxHP: 200)
         gameScene.removeAllChildren()
@@ -292,33 +309,94 @@ extension MainGameSceneViewModel: GameHUDDelegate {
     }
 
     func gameScene(_ scene: GameScene, didFinishWave completedWaveIndex: Int) {
-        if completedWaveIndex % 10 == 0 {
+        if BossKind.forWaveNumber(completedWaveIndex) != nil {
+            if completedWaveIndex == 20, !endlessModeActive {
+                pendingVictoryAfterArtifact = true
+            }
             let choices = getRandomArtifacts()
-            guard !choices.isEmpty else { return }
-            artifactChoices = choices
-            withAnimation {
-                showArtifactMenu = true
+            if !choices.isEmpty {
+                artifactChoices = choices
+                withAnimation {
+                    showArtifactMenu = true
+                }
+            } else {
+                resolvePendingVictoryIfNeeded()
             }
             return
         }
 
-        guard GameBalanceConfig.isPerkChoiceRound(completedWaveIndex) else { return }
         guard !heroesBySlot.isEmpty else { return }
 
-        let roles = Array(Set(heroesBySlot.values.map(\.role)))
-        let choices = upgradeManager.getRandom(
-            for: roles,
+        let mode: PerkDraftMode
+        if completedWaveIndex == GameBalanceConfig.specialOnlyPerkAfterCompletedWave {
+            mode = .specialOnly
+        } else if GameBalanceConfig.isMixedRareSpecialPerkRound(completedWaveIndex) {
+            mode = .mixedRareSpecial(specialChance: GameBalanceConfig.perkMixedSpecialChance)
+        } else {
+            mode = .standard
+        }
+        presentPerkDraft(mode: mode, skipRewardCompletedWave: completedWaveIndex, roles: nil)
+    }
+
+    func rerollPerkDraft() {
+        guard perkRerollsRemaining > 0 else { return }
+        perkRerollsRemaining -= 1
+        refillPerkDraftPool()
+    }
+
+    func skipPerkDraftForCoins() {
+        guard showUpgradeMenu else { return }
+        coins += perkSkipRewardCoins
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.92)) {
+            showUpgradeMenu = false
+        }
+        resetPerkDraftPresentation()
+    }
+
+    func continueRunEndless() {
+        endlessModeActive = true
+        withAnimation {
+            showRunVictoryScreen = false
+        }
+    }
+
+    private func presentPerkDraft(mode: PerkDraftMode, skipRewardCompletedWave: Int, roles: [UnitRole]?) {
+        perkDraftMode = mode
+        perkDraftRoles = roles
+        perkRerollsRemaining = GameBalanceConfig.perkDraftRerollsPerWindow
+        perkSkipRewardCoins = GameBalanceConfig.perkSkipCoinReward(completedWaveIndex: skipRewardCompletedWave)
+        refillPerkDraftPool()
+        guard !upgrades.isEmpty else { return }
+        withAnimation(.spring(response: 0.52, dampingFraction: 0.88)) {
+            showUpgradeMenu = true
+        }
+    }
+
+    private func refillPerkDraftPool() {
+        let rolePool = perkDraftRoles ?? Array(Set(heroesBySlot.values.map(\.role)))
+        upgrades = upgradeManager.getRandom(
+            for: rolePool,
             upgraded: artifacts.contains(where: { $0.id == .magicLamp }),
             mageType: heroesBySlot.values.first(where: { $0.role == .mage })?.stats.mageType,
             consumedSpecialIDs: consumedSpecialUpgradeIDs,
             heroRoster: Array(heroesBySlot.values),
-            specialOnly: GameBalanceConfig.isSpecialOnlyPerkRound(completedWaveIndex)
+            draftMode: perkDraftMode
         )
-        guard !choices.isEmpty else { return }
+    }
 
-        upgrades = choices
+    private func resetPerkDraftPresentation() {
+        perkRerollsRemaining = 0
+        perkSkipRewardCoins = 0
+        perkDraftMode = .standard
+        perkDraftRoles = nil
+    }
+
+    private func resolvePendingVictoryIfNeeded() {
+        guard pendingVictoryAfterArtifact else { return }
+        pendingVictoryAfterArtifact = false
+        guard !endlessModeActive else { return }
         withAnimation {
-            showUpgradeMenu = true
+            showRunVictoryScreen = true
         }
     }
 

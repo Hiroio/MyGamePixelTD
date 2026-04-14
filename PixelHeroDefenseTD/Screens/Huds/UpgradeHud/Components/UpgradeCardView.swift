@@ -13,8 +13,11 @@ struct UpgradeCardView: View {
     var body: some View {
 		VStack{
 		  Image(upgrade.icon)
+			 .resizable()
+			 .scaledToFit()
+			 .frame(width: 50)
 		  Text(upgrade.name)
-			 .font(.title3.bold())
+			 .font(.headline.bold())
 		  Text(currentStacks > 0 ? (upgrade.stepDescription ?? upgrade.description) : upgrade.description)
 			 .font(.caption)
         if currentStacks > 0 {

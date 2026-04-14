@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct PixelHeroDefenseTDApp: App {
+  @StateObject private var navManager = NavigationManager.shared
     var body: some Scene {
         WindowGroup {
-            AppRouter()
+			 AppRouter()
+				.environmentObject(navManager)
         }
     }
 }

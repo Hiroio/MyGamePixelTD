@@ -39,6 +39,6 @@ extension Artifact{
 	 Artifact(id: .magicLamp ,name: "Magic Lamp", description: "Unlock 4th option for upgrades", icon: "MagicLamp"),
 	 Artifact(id: .luckyCoin ,name: "Lucky Coin", description: "Enemy drop 10% more coins", icon: "Bank"),
 	 Artifact(id: .barricades ,name: "Barricade", description: "Builds a barricade(200hp) in front of the heroes", icon: "Baricade"),
-	 Artifact(id: .enemyEncyclopedia, name: "Monster Encyclopedia", description: "Crit Chance increase for 30%", icon: "Encyclopedia")
+	 Artifact(id: .enemyEncyclopedia, name: "Monster Guide", description: "Crit Chance increase for 30%", icon: "Encyclopedia")
   ]
 }

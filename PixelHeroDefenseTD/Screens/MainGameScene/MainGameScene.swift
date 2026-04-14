@@ -52,13 +52,14 @@ struct MainGameScene: View {
 		  .overlay(
 			 //			 MARK: COINS HUD + Boss HUD
 			 ZStack{
+				topCoinHUD
 				if viewModel.totalBossHP != 0, let boss = viewModel.activeBossKind {
 					 BossHUD(totalHP: viewModel.totalBossHP, currentHP: viewModel.currentBossHP, bossName: boss)
 						.transition(.move(edge: .top))
 						.zIndex(3)
 						.allowsHitTesting(false)
+						.padding(50)
 				}
-				topCoinHUD
 			 }
 			 .animation(.easeInOut, value: viewModel.totalBossHP != 0),
 			 alignment: .topLeading
@@ -87,15 +88,24 @@ struct MainGameScene: View {
 		  if viewModel.showUpgradeMenu {
 			 UpgradeView(
 				upgrades: viewModel.upgrades,
+				rerollsRemaining: viewModel.perkRerollsRemaining,
+				skipRewardCoins: viewModel.perkSkipRewardCoins,
 				onPick: { choice in
 				  viewModel.applyPerkUpgrade(choice)
 				},
+				onReroll: { viewModel.rerollPerkDraft() },
+				onSkip: { viewModel.skipPerkDraftForCoins() },
 				stackCountFor: { upgrade in
 				  viewModel.upgradeStackCount(for: upgrade)
 				}
 			 )
 			 .frame(maxWidth: .infinity, maxHeight: .infinity)
-			 .transition(.opacity)
+			 .transition(
+				.asymmetric(
+				  insertion: .opacity.combined(with: .scale(scale: 0.96)),
+				  removal: .opacity
+				)
+			 )
 			 .zIndex(100)
 			 .allowsHitTesting(viewModel.showUpgradeMenu)
 		  }
@@ -133,11 +143,21 @@ struct MainGameScene: View {
 			 .transition(.opacity)
 			 .zIndex(200)
 		  }
+
+		  if viewModel.showRunVictoryScreen {
+			 RunVictoryScreen(
+				onContinueEndless: { viewModel.continueRunEndless() },
+				onRestart: { viewModel.restartGame() }
+			 )
+			 .transition(.opacity)
+			 .zIndex(200)
+		  }
 		}
 		.animation(.easeInOut, value: viewModel.showHeroPickMenu)
 		.animation(.easeInOut, value: viewModel.isWaveRunning)
 		.animation(.easeInOut, value: viewModel.showHeroPanel)
-		.animation(.easeInOut, value: viewModel.showUpgradeMenu)
+		.animation(.spring(response: 0.5, dampingFraction: 0.88), value: viewModel.showUpgradeMenu)
+		.animation(.easeInOut, value: viewModel.showRunVictoryScreen)
 		.onAppear {
 		  viewModel.applySize(proxy.size)
 		}

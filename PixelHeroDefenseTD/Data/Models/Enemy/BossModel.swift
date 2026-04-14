@@ -5,11 +5,12 @@
 
 import Foundation
 
-/// Типи босів (по колу кожні 10 хвиль).
+/// Типи босів на хвилях 5, 10, 15, 20.
 enum BossKind: Int, CaseIterable, Sendable {
   case kingSlime
   case eliteOrc
   case armoredSkeleton
+  case void
   
   var name: String{
 	 switch self {
@@ -19,13 +20,19 @@ enum BossKind: Int, CaseIterable, Sendable {
 		"Elite Orc"
 	 case .armoredSkeleton:
 		"Armored Skeleton"
+	 case .void:
+		"Void"
 	 }
   }
   
   static func forWaveNumber(_ wave: Int) -> BossKind? {
-	 guard wave > 0, wave % 10 == 0 else { return nil }
-	 let idx = (wave / 10 - 1) % BossKind.allCases.count
-	 return BossKind(rawValue: idx)
+	 switch wave {
+	 case 5: return .kingSlime
+	 case 10: return .eliteOrc
+	 case 15: return .armoredSkeleton
+	 case 20: return .void
+	 default: return nil
+	 }
   }
   
   var enemyType: EnemyType {
@@ -33,6 +40,7 @@ enum BossKind: Int, CaseIterable, Sendable {
 	 case .eliteOrc: .eliteOrcBoss
 	 case .kingSlime: .kingSlimeBoss
 	 case .armoredSkeleton: .armoredSkeletonBoss
+	 case .void: .void
 	 }
   }
   
@@ -47,7 +55,7 @@ enum BossKind: Int, CaseIterable, Sendable {
 		  baseDamage: 80,
 		  attackRange: 5,
 		  reward: 75,
-		  round: 20
+		  round: 10
 		)
 	 case .kingSlime:
 		BossUnitModel(
@@ -58,7 +66,7 @@ enum BossKind: Int, CaseIterable, Sendable {
 		  baseDamage: 55,
 		  attackRange: 5,
 		  reward: 75,
-		  round: 10
+		  round: 5
 		)
 	 case .armoredSkeleton:
 		BossUnitModel(
@@ -69,7 +77,18 @@ enum BossKind: Int, CaseIterable, Sendable {
 		  baseDamage: 70,
 		  attackRange: 5,
 		  reward: 80,
-		  round: 30
+		  round: 15
+		)
+	 case .void:
+		BossUnitModel(
+		  kind: self,
+		  isRanged: false,
+		  delaySeconds: 1.75,
+		  baseHP: 5000,
+		  baseDamage: 70,
+		  attackRange: 5,
+		  reward: 100,
+		  round: 20
 		)
 	 }
   }
@@ -100,6 +119,7 @@ enum BossStatScaling {
 	 case .eliteOrc: asp = 0.48
 	 case .kingSlime: asp = 0.52
 	 case .armoredSkeleton: asp = 0.62
+	 case .void: asp = 1.0
 	 }
 	 return BasicEnemyStats(
 		baseDamage: (b.baseDamage * bossDmgMult) + dmgBonus,

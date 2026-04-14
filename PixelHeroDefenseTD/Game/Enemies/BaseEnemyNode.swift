@@ -80,6 +80,8 @@ class BaseEnemyNode: SKNode {
             roleMultiplier = 1.85 * 1.22
         case .armoredSkeletonBoss:
             roleMultiplier = 1.85
+        case .void:
+            roleMultiplier = 1.95
         }
         let finalScale = base * roleMultiplier
         sprite.setScale(finalScale)

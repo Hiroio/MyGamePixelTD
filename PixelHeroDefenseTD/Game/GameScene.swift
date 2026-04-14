@@ -325,16 +325,36 @@ final class GameScene: SKScene {
         heroBySlot.first { $0.value === hero }?.key
     }
 
+    /// Результат вхідної шкоди по герою: зняті HP і урон після святого щита (до броні героя).
+    typealias HeroIncomingDamageResult = (hpLost: Double, damageAfterHolyShield: Double)
+
     /// Спочатку знімається святий щит (слот), потім звичайний `applyDamage`.
-    func applyIncomingDamageToHero(_ hero: SKNode & HeroUnitNode, rawDamage: Double) {
+    @discardableResult
+    func applyIncomingDamageToHero(_ hero: SKNode & HeroUnitNode, rawDamage: Double) -> HeroIncomingDamageResult {
         var incoming = max(0, rawDamage)
         if let slot = heroSlot(for: hero), let sh = holyShieldBySlot[slot], sh > 0 {
             let absorb = min(sh, incoming)
             holyShieldBySlot[slot] = sh - absorb
             incoming -= absorb
         }
-        guard incoming > 0 else { return }
-        _ = hero.applyDamage(incoming)
+        let afterShield = incoming
+        guard afterShield > 0, hero.isAlive else { return (0, afterShield) }
+        let hpBefore = hero.currentHP
+        _ = hero.applyDamage(afterShield)
+        let lost = max(0, hpBefore - hero.currentHP)
+        return (lost, afterShield)
+    }
+
+    /// Thorns: відсоток від удару, що **пройшов святий щит** (шкода по «тілу» героя до DR), щоб важка броня не робила відбиття невидимим.
+    private func applyThornsReflect(attacker: BaseEnemyNode, defender: SKNode & HeroUnitNode, damageAfterHolyShield: Double) {
+        guard attacker.isAlive, damageAfterHolyShield > 0 else { return }
+        let p = max(0, defender.unitModel.stats.thornsPercentage)
+        guard p > 0 else { return }
+        let reflected = damageAfterHolyShield * p
+        guard reflected > 0 else { return }
+        if attacker.applyDamage(reflected) {
+            grantEnemyDeathReward(attacker, to: defender)
+        }
     }
 
     /// Передній ряд слотів 0…2: щит = max HP союзника × найкращий відсоток від жреців.
@@ -588,14 +608,9 @@ final class GameScene: SKScene {
                     nearestHero: targetHero,
                     reachMult: reachMult,
                     applyMeleeHit: { [weak self] hero, damage in
-                        self?.applyIncomingDamageToHero(hero, rawDamage: damage)
-                        let thornsPercent = max(0, hero.unitModel.stats.thornsPercentage)
-                        if thornsPercent > 0 {
-                            let reflected = damage * thornsPercent
-                            if boss.applyDamage(reflected) {
-                                grantEnemyDeathReward(boss, to: hero)
-                            }
-                        }
+                        guard let self else { return }
+                        let incoming = self.applyIncomingDamageToHero(hero, rawDamage: damage)
+                        self.applyThornsReflect(attacker: boss, defender: hero, damageAfterHolyShield: incoming.damageAfterHolyShield)
                     }
                 )
                 continue
@@ -618,14 +633,8 @@ final class GameScene: SKScene {
             let dist = hypot(enemy.position.x - approachPoint.x, enemy.position.y - approachPoint.y)
             let enemyInRange = dist <= (enemy.combatRange * reachMult)
             if enemy.tryAttack(whenInRange: enemyInRange) {
-                applyIncomingDamageToHero(targetHero, rawDamage: enemy.damagePerHit)
-                let thornsPercent = max(0, targetHero.unitModel.stats.thornsPercentage)
-                if thornsPercent > 0 {
-                    let reflected = enemy.damagePerHit * thornsPercent
-                    if enemy.applyDamage(reflected) {
-                        grantEnemyDeathReward(enemy, to: targetHero)
-                    }
-                }
+                let incoming = applyIncomingDamageToHero(targetHero, rawDamage: enemy.damagePerHit)
+                applyThornsReflect(attacker: enemy, defender: targetHero, damageAfterHolyShield: incoming.damageAfterHolyShield)
             } else if !enemyInRange {
                 enemy.moveTowards(approachPoint, deltaTime: dt)
             }

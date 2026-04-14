@@ -50,33 +50,25 @@ private enum CoreStatLine: CaseIterable {
         }
     }
 
-    func icon(for role: UnitRole) -> String {
-        switch (self, role) {
-        case (.damage, .knight): return "Berserk"
-        case (.attackSpeed, .knight): return "Bouler"
-        case (.hp, .knight): return "Cleve"
-        case (.defense, .knight): return "HeavyArmor"
-        case (.range, .knight): return "LongBow"
-        case (.damage, .archer): return "HeavyArrows"
-        case (.attackSpeed, .archer): return "FocusShot"
-        case (.hp, .archer): return "HeavyArmor"
-        case (.defense, .archer): return "HeavyArmor"
-        case (.range, .archer): return "LongBow"
-        case (.damage, .mage): return "Staff"
-        case (.attackSpeed, .mage): return "Staff"
-        case (.hp, .mage): return "ThirdEye"
-        case (.defense, .mage): return "HeavyArmor"
-        case (.range, .mage): return "ThirdEye"
-        case (.damage, .priest): return "Staff"
-        case (.attackSpeed, .priest): return "Staff"
-        case (.hp, .priest): return "ThirdEye"
-        case (.defense, .priest): return "HeavyArmor"
-        case (.range, .priest): return "ThirdEye"
-		  case (.damage, .lancer): return "Berserk"
-		  case (.attackSpeed, .lancer): return "Bouler"
-		  case (.hp, .lancer): return "Cleve"
-		  case (.defense, .lancer): return "HeavyArmor"
-		  case (.range, .lancer): return "LongBow"
+    /// Спільні іконки для **basic** (+5%) усіх класів.
+    var iconBasic: String {
+        switch self {
+        case .damage: return "BasicDamageUpgrade"
+        case .attackSpeed: return "AttackSpeedUpgrade"
+        case .hp: return "BasicHPUpgrade"
+        case .defense: return "DamageReductionUpgrade"
+        case .range: return "BasicRangeUpgrade"
+        }
+    }
+
+    /// Спільні іконки для **rare** core (+10%) усіх класів.
+    var iconRareCore: String {
+        switch self {
+        case .damage: return "RareDamageUpgrade"
+        case .attackSpeed: return "AttackSpeedUpgrade"
+        case .hp: return "RareHPUpgrade"
+        case .defense: return "DamageReductionUpgrade"
+        case .range: return "RareRangeUpgrade"
         }
     }
 }
@@ -95,9 +87,9 @@ private func coreStatUpgrades(for role: UnitRole) -> [HeroUpgrade] {
     CoreStatLine.allCases.flatMap { line -> [HeroUpgrade] in
         let prefix = roleTitle(role)
         let basic = HeroUpgrade(
-            name: "\(prefix) — \(line.titleBasic)",
+            name: "\(line.titleBasic)",
             description: "Increases one core stat.",
-            icon: line.icon(for: role),
+            icon: line.iconBasic,
             targetRole: role,
             rarity: .basic,
             stepDescription: "Next pick: same bonus again.",
@@ -105,9 +97,9 @@ private func coreStatUpgrades(for role: UnitRole) -> [HeroUpgrade] {
             step: { line.applyBasic(&$0) }
         )
         let rare = HeroUpgrade(
-            name: "\(prefix) — \(line.titleRare)",
+            name: "\(line.titleRare)",
             description: "Stronger core stat bonus.",
-            icon: line.icon(for: role),
+            icon: line.iconRareCore,
             targetRole: role,
             rarity: .rare,
             stepDescription: "Next pick: same bonus again.",
@@ -160,24 +152,24 @@ extension HeroUpgrade {
         ),
         HeroUpgrade(
             name: "Thorns",
-            description: "Reflect 10% of damage taken to attackers.",
+            description: "Reflect 35% of damage taken to attackers.",
             icon: "Thorns",
             targetRole: .knight,
             rarity: .special,
             mechanicFamily: .thorns,
-            apply: { $0.thornsPercentage += 0.1 },
+            apply: { $0.thornsPercentage += 0.35 },
             step: { _ in }
         ),
         HeroUpgrade(
             name: "Heavy Armor",
-            description: "−20% damage taken. −10% attack speed.",
+            description: "−25% damage taken. −5% attack speed.",
             icon: "HeavyArmor",
             targetRole: .knight,
             rarity: .special,
             mechanicFamily: .plateArmor,
             apply: {
-                $0.damageReduction = min(0.75, $0.damageReduction + 0.2)
-                $0.attackSpeed *= 0.9
+                $0.damageReduction = min(0.75, $0.damageReduction + 0.25)
+                $0.attackSpeed *= 0.95
             },
             step: { _ in }
         ),
@@ -220,25 +212,25 @@ extension HeroUpgrade {
         ),
         HeroUpgrade(
             name: "Thorns — Barbed",
-            description: "Thorns reflect +10%.",
+            description: "Thorns reflect +15%.",
             icon: "Thorns",
             targetRole: .knight,
             rarity: .rare,
             mechanicFamily: .thorns,
-            stepDescription: "Next: +10% thorns again.",
-            apply: { $0.thornsPercentage *= 1.1 },
-            step: { $0.thornsPercentage *= 1.1 }
+            stepDescription: "Next: +15% thorns again.",
+            apply: { $0.thornsPercentage += 0.15 },
+            step: { $0.thornsPercentage += 0.15 }
         ),
         HeroUpgrade(
             name: "Plate — Tempered",
-            description: "Damage reduction +10% (multiplicative, capped).",
+            description: "Damage reduction +6% (additive, capped).",
             icon: "HeavyArmor",
             targetRole: .knight,
             rarity: .rare,
             mechanicFamily: .plateArmor,
-            stepDescription: "Next: strengthen plate again.",
-            apply: { $0.damageReduction = min(0.75, $0.damageReduction * 1.1) },
-            step: { $0.damageReduction = min(0.75, $0.damageReduction * 1.1) }
+            stepDescription: "Next: +6% damage reduction again.",
+            apply: { $0.damageReduction = min(0.75, $0.damageReduction + 0.06) },
+            step: { $0.damageReduction = min(0.75, $0.damageReduction + 0.06) }
         ),
         HeroUpgrade(
             name: "Enrage — Bloodrush",
@@ -391,7 +383,7 @@ extension HeroUpgrade {
         apply: {
             $0.mageType = .fire
 			 $0.baseDamage *= 1.1
-            $0.attackSpeed *= 0.95
+            $0.attackSpeed *= 0.955
             $0.splashRadius = max($0.splashRadius, 15)
         },
         step: { _ in }
@@ -406,7 +398,7 @@ extension HeroUpgrade {
         mechanicFamily: .mageFrost,
         apply: {
             $0.mageType = .frost
-            $0.attackSpeed *= 0.95
+            $0.attackSpeed *= 0.955
             $0.splashRadius = max($0.splashRadius, 20)
             $0.slownessEffect = max($0.slownessEffect, 0.5)
         },

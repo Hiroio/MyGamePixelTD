@@ -12,32 +12,32 @@ struct GameInfoHUD: View {
   let waveEnemiesRemaining: Int
   let waveNumber: Int
   let selectedArtifacts: [Artifact]
-    var body: some View {
-		VStack(alignment: .trailing){
-		  HStack(spacing: 6) {
-			 if waveEnemiesTotal > 0 {
-				Text("\(waveEnemiesRemaining)/\(waveEnemiesTotal)")
-				  .font(.title2.monospaced().bold())
-			 } else {
-				Text("—")
-				  .font(.title3.monospaced())
-				  .foregroundStyle(.secondary)
-			 }
-			 Image("Enemies")
-				.resizable()
-				.scaledToFit()
-				.frame(width: 35, height: 35)
-		  }
-		  
-		  HStack(spacing: 6) {
-			 Text("\(waveNumber)")
+  var body: some View {
+	 VStack(alignment: .trailing){
+		HStack(spacing: 6) {
+		  if waveEnemiesTotal > 0 {
+			 Text("\(waveEnemiesRemaining)/\(waveEnemiesTotal)")
 				.font(.title2.monospaced().bold())
-			 Image("Wave")
-				.resizable()
-				.scaledToFit()
-				.frame(width: 35, height: 35)
+		  } else {
+			 Text("—")
+				.font(.title3.monospaced())
+				.foregroundStyle(.secondary)
 		  }
+		  Image("Enemies")
+			 .resizable()
+			 .scaledToFit()
+			 .frame(width: 35, height: 35)
 		}
+		
+		HStack(spacing: 6) {
+		  Text("\(waveNumber)")
+			 .font(.title2.monospaced().bold())
+		  Image("Wave")
+			 .resizable()
+			 .scaledToFit()
+			 .frame(width: 35, height: 35)
+		}
+		
 		
 		ForEach(selectedArtifacts){artifact in
 		  Image(artifact.icon)
@@ -45,7 +45,8 @@ struct GameInfoHUD: View {
 			 .scaledToFit()
 			 .frame(width: 50, height: 50)
 		}
-    }
+	 }
+  }
 }
 
 #Preview {

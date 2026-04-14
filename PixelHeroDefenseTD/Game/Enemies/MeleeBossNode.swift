@@ -149,6 +149,7 @@ extension BossKind {
         case .eliteOrc: return MeleeBossNode.eliteOrc(model: model, pause: pause)
         case .kingSlime: return MeleeBossNode.kingSlime(model: model, pause: pause)
         case .armoredSkeleton: return MeleeBossNode.armoredBoss(model: model, pause: pause)
+        case .void: return MeleeBossNode.eliteOrc(model: model, pause: pause)
         }
     }
 }

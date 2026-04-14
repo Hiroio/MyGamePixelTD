@@ -8,7 +8,7 @@
 import Foundation
 
 
-enum EnemyType: String, Sendable {
+enum EnemyType: String, Sendable, Identifiable, CaseIterable {
   case slime
   case orc
   case skeleton
@@ -17,10 +17,15 @@ enum EnemyType: String, Sendable {
   case swordsmanSkeleton
   case werewolf
   case werebear
-  /// Боси (окрема логіка AI та спавн кожні 10 хвиль).
+  /// Боси (окрема логіка AI та спавн на 5/10/15/20).
   case eliteOrcBoss
   case kingSlimeBoss
   case armoredSkeletonBoss
+  case void
+  
+  var id: String{
+	 self.rawValue
+  }
 }
 
 struct BasicEnemyStats: Sendable {
@@ -109,6 +114,8 @@ extension EnemyType{
 		BossKind.kingSlime.makeMeleeBoss(model: model)
 	 case .armoredSkeletonBoss:
 		BossKind.armoredSkeleton.makeMeleeBoss(model: model)
+	 case .void:
+		BossKind.void.makeMeleeBoss(model: model)
 	 }
   }
 
@@ -118,6 +125,7 @@ extension EnemyType{
     case .eliteOrcBoss: .eliteOrc
     case .kingSlimeBoss: .kingSlime
     case .armoredSkeletonBoss: .armoredSkeleton
+    case .void: .void
     default: nil
     }
   }
@@ -146,6 +154,8 @@ extension EnemyType{
 		BossStatScaling.enemyStats(for: .kingSlime, wave: 1)
 	 case .armoredSkeletonBoss:
 		BossStatScaling.enemyStats(for: .armoredSkeleton, wave: 1)
+	 case .void:
+		BossStatScaling.enemyStats(for: .void, wave: 1)
 	 }
   }
 }

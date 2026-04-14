@@ -8,9 +8,10 @@
 import SwiftUI
 
 struct AppRouter: View {
+  @EnvironmentObject private var navigationManager: NavigationManager
   @State private var started: Bool = false
     var body: some View {
-		VStack{
+		ZStack{
 		  if started{
 			 MainGameScene()
 				.transition(.opacity)
@@ -20,10 +21,15 @@ struct AppRouter: View {
 				.zIndex(1)
 				.allowsTightening(!started)
 		  }
+		  
+		  SecondaryScreens()
+			 .animation(.easeInOut, value: navigationManager.secondaryScreens != nil)
 		  }
+		
     }
 }
 
 #Preview {
     AppRouter()
+	 .environmentObject(NavigationManager.shared)
 }
