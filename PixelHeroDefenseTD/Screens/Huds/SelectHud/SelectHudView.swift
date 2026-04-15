@@ -25,7 +25,7 @@ struct SelectHudView: View {
 		  }
 		}
 		.fontDesign(.monospaced)
-		.padding()
+		.padding(40)
 	 }
   }
 }
@@ -42,14 +42,9 @@ func RecruitCard(heroUnit: UnitRole, inRoster: Bool) -> some View{
 		ZStack{
 		  Image(heroUnit.upgradeIcon)
 			 .resizable()
-			 .scaleEffect(1)
-//		  Image(heroUnit.upgradeIcon)
-//			 .resizable()
-//			 .rotationEffect(Angle(degrees: 70))
-//			 .scaleEffect(-1.1)
 		  Image(heroUnit.helmetIcon)
 			 .resizable()
-			 .offset(x: -40)
+			 .offset(x: -30)
 		}
 		.frame(width: 100, height: 100)
 	 }
@@ -80,11 +75,10 @@ func RecruitCard(heroUnit: UnitRole, inRoster: Bool) -> some View{
 	 .kerning(1)
   }
   .foregroundStyle(.white)
-  .frame(width: 350)
+  .frame(maxWidth: .infinity)
   .background(
 	 Image("Banner3")
 		.resizable()
   )
-  .scaledToFit()
   
 }

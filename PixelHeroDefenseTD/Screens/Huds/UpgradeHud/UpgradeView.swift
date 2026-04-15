@@ -17,8 +17,6 @@ struct UpgradeView: View {
     let stackCountFor: (HeroUpgrade) -> Int
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 16) {
                 VStack {
                     HStack {
@@ -86,8 +84,6 @@ struct UpgradeView: View {
 
             }
 				.padding()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

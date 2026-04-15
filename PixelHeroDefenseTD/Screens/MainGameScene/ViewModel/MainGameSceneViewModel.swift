@@ -25,7 +25,9 @@ final class MainGameSceneViewModel: ObservableObject {
     @Published var heroesBySlot: [Int: HeroUnitModel] = [:]
 
     @Published var coins: Int = GameBalanceConfig.startingCoins
-
+	 
+  @Published var screenState: HUDEnum? = nil
+  
     @Published var waveNumber: Int = 1
     @Published var canStartWave: Bool = true
     @Published var isWaveRunning: Bool = false
@@ -135,7 +137,7 @@ extension MainGameSceneViewModel {
 
      artifactChoices = []
      withAnimation {
-        showArtifactMenu = false
+        screenState = nil
      }
      resolvePendingVictoryIfNeeded()
   }
@@ -178,13 +180,14 @@ extension MainGameSceneViewModel {
 	 copy[slot] = HeroUnitModel(role: hero, stats: stats)
 	 heroesBySlot = copy
 	 gameScene.syncHeroes(from: heroesBySlot)
-	 showHeroPickMenu = false
+	 screenState = nil
   }
 
-    func upgradeKnight() {
+  func upgradeKnight(hero: HeroUnitModel) {
         guard !isWaveRunning else { return }
-        guard let slot = panelSlot, var model = heroesBySlot[slot] else { return }
-
+	 guard let slot = heroesBySlot.first(where: {$1.id == hero.id})?.key, var model = heroesBySlot[slot] else { return }
+	 
+	 
         let cost = GameBalanceConfig.heroUpgradeCost(currentLevel: model.stats.currentLevel)
         guard coins >= cost else { return }
 
@@ -224,7 +227,7 @@ extension MainGameSceneViewModel {
         heroesBySlot = copy
         gameScene.applyHeroModel(at: slot, model: model, healToFull: false)
         withAnimation(.spring(response: 0.45, dampingFraction: 0.92)) {
-            showUpgradeMenu = false
+            screenState = nil
         }
         resetPerkDraftPresentation()
     }
@@ -247,7 +250,7 @@ extension MainGameSceneViewModel {
     }
 
     func dismissHeroPickMenu() {
-        showHeroPickMenu = false
+        screenState = nil
     }
 
     func restartGame() {
@@ -257,6 +260,7 @@ extension MainGameSceneViewModel {
         isWaveRunning = false
         heroesBySlot = [:]
         panelSlot = nil
+		screenState = nil
         showHeroPanel = false
         showHeroPickMenu = false
         showUpgradeMenu = false
@@ -368,7 +372,7 @@ extension MainGameSceneViewModel: GameHUDDelegate {
         refillPerkDraftPool()
         guard !upgrades.isEmpty else { return }
         withAnimation(.spring(response: 0.52, dampingFraction: 0.88)) {
-            showUpgradeMenu = true
+			 screenState = .upgrade
         }
     }
 
@@ -456,19 +460,15 @@ extension MainGameSceneViewModel: GameHUDDelegate {
                 panelSlot = sl
                 gameScene.setHUDStatsSlot(sl)
                 gameScene.setHighlightedSlot(sl)
-                showHeroPickMenu = false
-                withAnimation(.easeOut(duration: 0.22)) {
-                    showHeroPanel = true
-                }
+						screenState = .heroSelection
             }
         } else {
             if isWaveRunning { return }
-            showHeroPanel = false
             panelSlot = nil
             gameScene.setHUDStatsSlot(nil)
             gameScene.setHighlightedSlot(nil)
             pendingEmptySlot = sl
-            showHeroPickMenu = true
+			 screenState = .heroPick
         }
     }
 }

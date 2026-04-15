@@ -157,7 +157,7 @@ extension HeroUpgrade {
             targetRole: .knight,
             rarity: .special,
             mechanicFamily: .thorns,
-            apply: { $0.thornsPercentage += 0.35 },
+            apply: { $0.thornsPercentage += 1.35 },
             step: { _ in }
         ),
         HeroUpgrade(
@@ -218,8 +218,8 @@ extension HeroUpgrade {
             rarity: .rare,
             mechanicFamily: .thorns,
             stepDescription: "Next: +15% thorns again.",
-            apply: { $0.thornsPercentage += 0.15 },
-            step: { $0.thornsPercentage += 0.15 }
+            apply: { $0.thornsPercentage *= 1.15 },
+            step: { $0.thornsPercentage *= 1.15 }
         ),
         HeroUpgrade(
             name: "Plate — Tempered",
@@ -291,7 +291,7 @@ extension HeroUpgrade {
             mechanicFamily: .multiShot,
             apply: {
                 $0.enemyTarget += 1
-                $0.baseDamage *= 0.9
+                $0.baseDamage *= 0.8
             },
             step: { _ in }
         ),
@@ -398,7 +398,7 @@ extension HeroUpgrade {
         mechanicFamily: .mageFrost,
         apply: {
             $0.mageType = .frost
-            $0.attackSpeed *= 0.955
+            $0.attackSpeed *= 0.95
             $0.splashRadius = max($0.splashRadius, 20)
             $0.slownessEffect = max($0.slownessEffect, 0.5)
         },

@@ -13,7 +13,7 @@ struct RunVictoryScreen: View {
 
   var body: some View {
 	 ZStack {
-		Color.black.ignoresSafeArea().opacity(0.55)
+		Color.black.ignoresSafeArea().opacity(0.25)
 		VStack(spacing: 22) {
 		  Text("Run cleared")
 			 .font(.custom("antiquity-print", size: 36))
