@@ -39,7 +39,7 @@ struct BasicEnemyStats: Sendable {
   static func orc() -> BasicEnemyStats {
 	 BasicEnemyStats(
 		baseDamage: 2,
-		baseHP: 18,
+		baseHP: 15,
 		attackSpeed: 1.0,
 		moveSpeed: 0.70,
 		range: 5,
@@ -60,16 +60,16 @@ struct BasicEnemyStats: Sendable {
 	 BasicEnemyStats(baseDamage: 2, baseHP: 12, attackSpeed: 1.1, moveSpeed: 0.97, range: 5, reward: 4)
   }
   static func armoredSkeleton() -> BasicEnemyStats{
-	 BasicEnemyStats(baseDamage: 2, baseHP: 25, attackSpeed: 1.1, moveSpeed: 0.97, range: 5, reward: 8)
+	 BasicEnemyStats(baseDamage: 2, baseHP: 35, attackSpeed: 1.1, moveSpeed: 0.97, range: 5, reward: 8)
   }
   static func swordsmanSkeleton() -> BasicEnemyStats{
 	 BasicEnemyStats(baseDamage: 4, baseHP: 50, attackSpeed: 1.1, moveSpeed: 0.97, range: 5, reward: 8)
   }
   static func armoredOrc() -> BasicEnemyStats{
-	 BasicEnemyStats(baseDamage: 2, baseHP: 60, attackSpeed: 1.0, moveSpeed: 0.88, range: 5, reward: 10)
+	 BasicEnemyStats(baseDamage: 2, baseHP: 40, attackSpeed: 1.0, moveSpeed: 0.88, range: 5, reward: 10)
   }
   static func werewolf() -> BasicEnemyStats{
-	 BasicEnemyStats(baseDamage: 3, baseHP: 45, attackSpeed: 1.2, moveSpeed: 1.06, range: 5, reward: 7)
+	 BasicEnemyStats(baseDamage: 3, baseHP: 65, attackSpeed: 1.2, moveSpeed: 1.06, range: 5, reward: 7)
   }
   static func werebear() -> BasicEnemyStats{
 	 BasicEnemyStats(baseDamage: 4, baseHP: 75, attackSpeed: 1.2, moveSpeed: 1.06, range: 5, reward: 8)
@@ -115,7 +115,7 @@ extension EnemyType{
 	 case .armoredSkeletonBoss:
 		BossKind.armoredSkeleton.makeMeleeBoss(model: model)
 	 case .void:
-		BossKind.void.makeMeleeBoss(model: model)
+		FinaleBossNode(model: model)
 	 }
   }
 

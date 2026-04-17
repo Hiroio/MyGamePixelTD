@@ -21,7 +21,7 @@ enum BossKind: Int, CaseIterable, Sendable {
 	 case .armoredSkeleton:
 		"Armored Skeleton"
 	 case .void:
-		"Void"
+		"Bringer of Death"
 	 }
   }
   
@@ -51,8 +51,8 @@ enum BossKind: Int, CaseIterable, Sendable {
 		  kind: self,
 		  isRanged: false,
 		  delaySeconds: 2.0,
-		  baseHP: 2000,
-		  baseDamage: 80,
+		  baseHP: 1000,
+		  baseDamage: 50,
 		  attackRange: 5,
 		  reward: 75,
 		  round: 10
@@ -62,8 +62,8 @@ enum BossKind: Int, CaseIterable, Sendable {
 		  kind: self,
 		  isRanged: false,
 		  delaySeconds: 2.4,
-		  baseHP: 1000,
-		  baseDamage: 55,
+		  baseHP: 200,
+		  baseDamage: 25,
 		  attackRange: 5,
 		  reward: 75,
 		  round: 5
@@ -73,7 +73,7 @@ enum BossKind: Int, CaseIterable, Sendable {
 		  kind: self,
 		  isRanged: false,
 		  delaySeconds: 1.75,
-		  baseHP: 2500,
+		  baseHP: 2000,
 		  baseDamage: 70,
 		  attackRange: 5,
 		  reward: 80,
@@ -85,7 +85,7 @@ enum BossKind: Int, CaseIterable, Sendable {
 		  isRanged: false,
 		  delaySeconds: 1.75,
 		  baseHP: 5000,
-		  baseDamage: 70,
+		  baseDamage: 100,
 		  attackRange: 5,
 		  reward: 100,
 		  round: 20

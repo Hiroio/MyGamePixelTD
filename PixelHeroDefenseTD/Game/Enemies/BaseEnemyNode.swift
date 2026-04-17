@@ -185,6 +185,21 @@ class BaseEnemyNode: SKNode {
         sprite.run(SKAction.sequence([animate, done]), withKey: "anim")
     }
 
+    /// Одноразова анімація (cast тощо); після завершення викликається `completion`.
+    func playOneShotAnimation(
+        textures: [SKTexture],
+        timePerFrame: TimeInterval = 0.09,
+        completion: @escaping () -> Void
+    ) {
+        sprite.removeAction(forKey: "anim")
+        guard !textures.isEmpty else {
+            completion()
+            return
+        }
+        let animate = SKAction.animate(with: textures, timePerFrame: timePerFrame, resize: true, restore: true)
+        sprite.run(SKAction.sequence([animate, .run(completion)]), withKey: "anim")
+    }
+
     private func playAttackThenResumeWalk() {
         sprite.removeAction(forKey: "anim")
         guard !attackTextures.isEmpty else {

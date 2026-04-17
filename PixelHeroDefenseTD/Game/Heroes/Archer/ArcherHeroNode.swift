@@ -154,29 +154,49 @@ final class ArcherHeroNode: SKNode, HeroUnitNode {
     }
 
     private func fireArrow(from heroPos: CGPoint, to target: BaseEnemyNode, in scene: GameScene) {
+        spawnArrowProjectile(from: heroPos, to: target, in: scene) { [weak self, weak scene, weak target] in
+            guard let self, let scene, let target, target.isAlive else { return }
+            self.applyPrimaryArrowHit(on: target, in: scene, heroPos: heroPos)
+        }
+    }
+
+    /// Стріла летить від `start` до `target`; по прильоту — `onImpact` (як у рикошеті лансера).
+    private func spawnArrowProjectile(
+        from start: CGPoint,
+        to target: BaseEnemyNode,
+        in scene: GameScene,
+        onImpact: @escaping () -> Void
+    ) {
+        guard target.isAlive else { return }
+
         let projectile = SKSpriteNode(texture: projectileTexture)
         projectile.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        projectile.position = heroPos
+        projectile.position = start
         projectile.zPosition = 60
         let projScale = max(0.20, sprite.xScale * 0.55) * 1.8
         projectile.setScale(projScale)
         scene.addChild(projectile)
 
         let endPoint = CGPoint(x: target.position.x, y: target.position.y + 6)
-        let distance = hypot(endPoint.x - heroPos.x, endPoint.y - heroPos.y)
+        let distance = hypot(endPoint.x - start.x, endPoint.y - start.y)
         let speed: CGFloat = 650
         let duration = TimeInterval(max(0.08, min(0.35, distance / speed)))
         let move = SKAction.move(to: endPoint, duration: duration)
         move.timingMode = .easeInEaseOut
 
-        let hit = SKAction.run { [weak self, weak scene, weak target] in
-            guard let self, let scene, let target else { return }
-            self.applyArrowHit(on: target, in: scene, heroPos: heroPos)
+        let hit = SKAction.run {
+            projectile.removeFromParent()
+            onImpact()
         }
-        projectile.run(.sequence([move, hit, .removeFromParent()]))
+        projectile.run(.sequence([move, hit]))
     }
 
-    private func applyArrowHit(on target: BaseEnemyNode, in scene: GameScene, heroPos: CGPoint) {
+    /// Множник до шкоди **першого** влучання: 1-й рикошет 50%, усі наступні — 25%.
+    private func ricochetDamageMultiplier(bounceIndex: Int) -> Double {
+        bounceIndex == 0 ? 0.5 : 0.25
+    }
+
+    private func applyPrimaryArrowHit(on target: BaseEnemyNode, in scene: GameScene, heroPos: CGPoint) {
         guard target.isAlive else { return }
 
         let distanceFromHero = hypot(target.position.x - heroPos.x, target.position.y - heroPos.y)
@@ -194,25 +214,57 @@ final class ArcherHeroNode: SKNode, HeroUnitNode {
         let bounceCount = max(0, unitModel.stats.bounceCount)
         guard bounceCount > 0 else { return }
 
-        let bounceTargets = scene
-            .livingEnemiesForHeroCombat()
-            .filter { $0 !== target }
-            .sorted { a, b in
-                let da = hypot(a.position.x - target.position.x, a.position.y - target.position.y)
-                let db = hypot(b.position.x - target.position.x, b.position.y - target.position.y)
-                return da < db
-            }
-            .prefix(bounceCount)
+        let ex: Set<ObjectIdentifier> = [ObjectIdentifier(target)]
+        startArrowRicochet(
+            from: target.position,
+            excluding: ex,
+            hopsLeft: bounceCount,
+            bounceIndex: 0,
+            referenceDamage: primaryDamage,
+            in: scene,
+            heroPos: heroPos
+        )
+    }
 
-        let bounceDamage = primaryDamage * 0.5
-        for bounce in bounceTargets {
-            if bounce.applyDamage(bounceDamage) {
-                grantCoinReward(for: bounce, in: scene, heroPos: heroPos)
+    private func startArrowRicochet(
+        from origin: CGPoint,
+        excluding: Set<ObjectIdentifier>,
+        hopsLeft: Int,
+        bounceIndex: Int,
+        referenceDamage: Double,
+        in scene: GameScene,
+        heroPos: CGPoint
+    ) {
+        guard hopsLeft > 0 else { return }
+        let candidates = scene.livingEnemiesForHeroCombat().filter { !excluding.contains(ObjectIdentifier($0)) }
+        guard let next = candidates.min(by: { a, b in
+            hypot(a.position.x - origin.x, a.position.y - origin.y) < hypot(b.position.x - origin.x, b.position.y - origin.y)
+        }) else { return }
+
+        let bounceDamage = referenceDamage * ricochetDamageMultiplier(bounceIndex: bounceIndex)
+
+        spawnArrowProjectile(from: origin, to: next, in: scene) { [weak self, weak scene, weak next] in
+            guard let self, let scene, let next, next.isAlive else { return }
+
+            if next.applyDamage(bounceDamage) {
+                self.grantCoinReward(for: next, in: scene, heroPos: heroPos)
             }
-            bounce.applyKnockback(from: target.position, strength: unitModel.stats.knockback)
-            if unitModel.stats.slownessEffect > 0 {
-                bounce.applySlow(percent: unitModel.stats.slownessEffect, duration: 2.0)
+            next.applyKnockback(from: origin, strength: self.unitModel.stats.knockback)
+            if self.unitModel.stats.slownessEffect > 0 {
+                next.applySlow(percent: self.unitModel.stats.slownessEffect, duration: 2.0)
             }
+
+            var ex = excluding
+            ex.insert(ObjectIdentifier(next))
+            self.startArrowRicochet(
+                from: next.position,
+                excluding: ex,
+                hopsLeft: hopsLeft - 1,
+                bounceIndex: bounceIndex + 1,
+                referenceDamage: referenceDamage,
+                in: scene,
+                heroPos: heroPos
+            )
         }
     }
 

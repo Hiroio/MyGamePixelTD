@@ -34,7 +34,7 @@ extension EnemyType{
 	 case .armoredSkeletonBoss:
 		return UIImage.cropSprite(name: "ArmoredSkeletonIdle", count: 6)
 	 case .void:
-		return UIImage.cropSprite(name: "EliteOrcIdle", count: 6)
+		return (1...8).compactMap { UIImage(named: "FinaleBossIdle\($0)") }
 	 }
   }
 }

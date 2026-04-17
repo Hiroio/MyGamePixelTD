@@ -318,6 +318,8 @@ final class GameScene: SKScene {
         guard barricadeCurrentHP <= 0 else { return }
         barricadeCurrentHP = 0
         guard let node = barricadeNode else { return }
+        // Обнуляємо посилання одразу: вузол ще зникає анімацією, але наступний `ensureBarricadeExists` має створити новий спрайт.
+        barricadeNode = nil
         node.run(.sequence([.fadeOut(withDuration: 0.2), .removeFromParent()]))
     }
 
@@ -462,7 +464,10 @@ final class GameScene: SKScene {
         guard let kind = BossKind.forWaveNumber(waveNumber) else { return }
         let stats = EnemyStatScaling.stats(for: kind.enemyType, wave: waveNumber)
         let model = EnemyUnitModel(role: kind.enemyType, stats: stats)
-        let boss = kind.makeMeleeBoss(model: model)
+        let boss: BaseEnemyNode = {
+            if kind == .void { return FinaleBossNode(model: model) }
+            return kind.makeMeleeBoss(model: model)
+        }()
         boss.updateScale(forSceneHeight: size.height)
         boss.zPosition = 26
 
@@ -477,7 +482,9 @@ final class GameScene: SKScene {
     }
 
     private func pushBossHPToHUD() {
-        if let boss = enemies.first(where: { $0 is MeleeBossNode && $0.isAlive }) {
+        if let boss = enemies.first(where: {
+            $0.isAlive && ($0 is MeleeBossNode || $0 is FinaleBossNode)
+        }) {
             hudDelegate?.gameScene(
                 self,
                 reportedBossHP: boss.currentHP,
@@ -616,6 +623,45 @@ final class GameScene: SKScene {
                 continue
             }
 
+            if let finaleBoss = enemy as? FinaleBossNode {
+                let boss = finaleBoss
+                if barricadeAlive {
+                    let dist = hypot(boss.position.x - barricadePos.x, boss.position.y - barricadePos.y)
+                    let inRange = dist <= (boss.combatRange * reachMult)
+                    if boss.tryAttack(whenInRange: inRange) {
+                        applyDamageToBarricade(boss.damagePerHit)
+                    } else if !inRange {
+                        boss.moveTowards(barricadePos, deltaTime: dt)
+                    }
+                    continue
+                }
+                let targetHero = nearestLivingHero(to: boss.position)
+                boss.tickFinaleBossPattern(
+                    deltaTime: dt,
+                    scene: self,
+                    sceneSize: size,
+                    nearestHero: targetHero,
+                    reachMult: reachMult,
+                    livingHeroesProvider: { [weak self] in
+                        guard let self else { return [] }
+                        return self.livingHeroes()
+                    },
+                    applyMeleeHit: { [weak self] hero, damage in
+                        guard let self else { return }
+                        let incoming = self.applyIncomingDamageToHero(hero, rawDamage: damage)
+                        self.applyThornsReflect(attacker: boss, defender: hero, damageAfterHolyShield: incoming.damageAfterHolyShield)
+                    },
+                    applyAOEToAllHeroes: { [weak self] damage in
+                        guard let self else { return }
+                        for hero in self.livingHeroes() {
+                            let incoming = self.applyIncomingDamageToHero(hero, rawDamage: damage)
+                            self.applyThornsReflect(attacker: boss, defender: hero, damageAfterHolyShield: incoming.damageAfterHolyShield)
+                        }
+                    }
+                )
+                continue
+            }
+
             if barricadeAlive {
                 let dist = hypot(enemy.position.x - barricadePos.x, enemy.position.y - barricadePos.y)
                 let enemyInRange = dist <= (enemy.combatRange * reachMult)
@@ -690,7 +736,7 @@ final class GameScene: SKScene {
             guard let self else { return }
             self.hudDelegate?.gameScene(self, reportedWaveState: self.waveNumber, canStartWave: self.canStartWave, isWaveRunning: self.isWaveRunning)
             if let vm = self.hudDelegate as? MainGameSceneViewModel {
-                vm.showLoseScreen = true
+                vm.presentLoseScreen()
             }
         }
     }
@@ -730,6 +776,10 @@ final class GameScene: SKScene {
         // Після завершення хвилі всі герої відновлюють HP.
         for hero in heroBySlot.values {
             hero.applyModel(hero.unitModel, healToFull: true)
+        }
+
+        if barricadeEnabled {
+            ensureBarricadeExists(restoreHP: true)
         }
 
         canStartWave = true

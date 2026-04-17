@@ -58,7 +58,7 @@ final class MeleeBossNode: BaseEnemyNode {
                 idleTimer = 0
                 runIdleAnimationLoop()
             } else {
-                runWalkAnimationLoop()
+                // Не викликати `runWalkAnimationLoop()` щокадру — він знімає action і гальмує анімацію на 1-му кадрі.
                 moveTowards(center, deltaTime: dt)
             }
 
@@ -87,7 +87,6 @@ final class MeleeBossNode: BaseEnemyNode {
                     self.runWalkAnimationLoop()
                 }
             } else {
-                runWalkAnimationLoop()
                 moveTowards(hero.position, deltaTime: dt)
             }
 
@@ -100,7 +99,6 @@ final class MeleeBossNode: BaseEnemyNode {
                 idleTimer = 0
                 runIdleAnimationLoop()
             } else {
-                runWalkAnimationLoop()
                 moveTowards(center, deltaTime: dt)
             }
         }
@@ -149,7 +147,8 @@ extension BossKind {
         case .eliteOrc: return MeleeBossNode.eliteOrc(model: model, pause: pause)
         case .kingSlime: return MeleeBossNode.kingSlime(model: model, pause: pause)
         case .armoredSkeleton: return MeleeBossNode.armoredBoss(model: model, pause: pause)
-        case .void: return MeleeBossNode.eliteOrc(model: model, pause: pause)
+        case .void:
+            preconditionFailure("Final boss uses FinaleBossNode, not MeleeBossNode")
         }
     }
 }

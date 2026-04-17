@@ -12,17 +12,29 @@ struct SomeGameInfo: View {
   var body: some View {
 	 VStack{
 		HStack{
+//		  MARK: COINS
 		  coinHUD
 		  Spacer()
+//		  MARK: WAVES + ENEMIES
 		  gameInfo
 		}
 		.padding(.horizontal)
+		
+//		MARK: BOSS BAR
+		if let activeBossKind = vm.activeBossKind{
+		  BossHUD(totalHP: vm.totalBossHP, currentHP: vm.currentBossHP, bossName: activeBossKind)
+			 .padding()
+			 .transition(.move(edge: .top).combined(with: .opacity))
+			 .zIndex(1)
+			 .allowsHitTesting(false)
+		}
+		
 		Spacer()
 		
 		VStack{
 		  if vm.screenState == nil && !vm.isWaveRunning {
 			 HeroesUpgradeHUD(heroes: Array(vm.heroesBySlot.values), balance: vm.coins, onUpgrade: {hero in
-				vm.upgradeKnight(hero: hero)
+				vm.upgradeHero(hero: hero)
 			 })
 			 .frame(maxWidth: .infinity, alignment: .bottomTrailing)
 			 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -45,6 +57,8 @@ struct SomeGameInfo: View {
 		.allowsHitTesting(vm.screenState == nil)
 		
 	 }
+	 .animation(.bouncy, value: vm.isWaveRunning)
+	 .animation(.bouncy, value: vm.activeBossKind != nil)
 	 
   }
   
@@ -60,6 +74,7 @@ struct SomeGameInfo: View {
 		  .foregroundStyle(.white)
 		  .contentTransition(.numericText())
 	 }
+	 .animation(.easeInOut, value: vm.coins)
 	 .padding()
 	 .background(
 		Image("Banner4")

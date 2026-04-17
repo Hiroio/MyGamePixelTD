@@ -41,7 +41,6 @@ final class MainGameSceneViewModel: ObservableObject {
     @Published var totalBossHP: Double = 0
     @Published var currentBossHP: Double = 0
 
-    @Published var showLoseScreen: Bool = false
     @Published var showRunVictoryScreen: Bool = false
 
     /// Після перемоги на30-й хвилі — дозволити хвилі 31+ без «фіналу».
@@ -69,7 +68,6 @@ final class MainGameSceneViewModel: ObservableObject {
 
     private var perkDraftMode: PerkDraftMode = .standard
     private var perkDraftRoles: [UnitRole]? = nil
-    private var pendingVictoryAfterArtifact: Bool = false
 
     var pendingEmptySlot: Int = 0
 
@@ -98,17 +96,17 @@ extension MainGameSceneViewModel {
   func canAffordHeroHire() -> Bool{
 	 coins >= GameBalanceConfig.heroHireCost
   }
-  
+//  HELP FOR ARTIFACT SELECTION
   func getRandomArtifacts() -> [Artifact]{
 	 Array(Artifact.allArtifact.filter({ item in !self.artifacts.contains(where: {$0.id == item.id})}).shuffled().prefix(3))
   }
-
+// Applying Artifact Buff
   private func applyArtifactToCurrentHeroes(_ artifact: Artifact) {
      var copy = heroesBySlot
      for (slot, var model) in copy {
         switch artifact.id {
         case .bonusMeal:
-           model.stats.baseDamage *= 1.15
+           model.stats.baseDamage *= 1.2
         case .enemyEncyclopedia:
            model.stats.critChance += 0.3
         default:
@@ -119,7 +117,8 @@ extension MainGameSceneViewModel {
      heroesBySlot = copy
      gameScene.syncHeroes(from: heroesBySlot)
   }
-
+  
+// Selecting Artifact from random selection
   func selectArtifact(_ artifact: Artifact) {
      guard !artifacts.contains(where: { $0.id == artifact.id }) else { return }
      artifacts.append(artifact)
@@ -139,7 +138,6 @@ extension MainGameSceneViewModel {
      withAnimation {
         screenState = nil
      }
-     resolvePendingVictoryIfNeeded()
   }
 
     var heroForPanel: HeroUnitModel? {
@@ -162,6 +160,7 @@ extension MainGameSceneViewModel {
         gameScene.requestStartWave()
     }
 
+//  MARK: - Assinging hero for selected slot
   func assignHeroToPendingSlot(hero: UnitRole){
 	 guard !isWaveRunning else { return }
 	 guard !hasHeroInRoster(hero: hero) else { return }
@@ -183,14 +182,15 @@ extension MainGameSceneViewModel {
 	 screenState = nil
   }
 
-  func upgradeKnight(hero: HeroUnitModel) {
-        guard !isWaveRunning else { return }
-	 guard let slot = heroesBySlot.first(where: {$1.id == hero.id})?.key, var model = heroesBySlot[slot] else { return }
+//  MARK: -UPGRADING HERO
+  func upgradeHero(hero: HeroUnitModel) {
+        guard !isWaveRunning else { return } // check if wave running
+	 guard let slot = heroesBySlot.first(where: {$1.id == hero.id})?.key, var model = heroesBySlot[slot] else { return } // Trying to find Hero Slot
 	 
 	 
-        let cost = GameBalanceConfig.heroUpgradeCost(currentLevel: model.stats.currentLevel)
-        guard coins >= cost else { return }
-
+        let cost = GameBalanceConfig.heroUpgradeCost(currentLevel: model.stats.currentLevel) // calculate hero upgrade cost
+        guard coins >= cost else { return } // checking if it's enough coins
+// MARK: -	 HERO UPGRADE SCALE
         coins -= cost
         model.stats.currentLevel += 1
         model.stats.baseHP *= 1.0 + GameBalanceConfig.heroHPBonusRatioPerLevel
@@ -203,7 +203,7 @@ extension MainGameSceneViewModel {
 
         gameScene.applyHeroModel(at: slot, model: model, healToFull: true)
         gameScene.playUpgradeEffect(at: slot)
-
+// MARK: -	 CHECK Condition for Upgrade Perks
         if GameBalanceConfig.isHeroPerkMilestoneLevel(model.stats.currentLevel) {
             let lastCompleted = max(0, waveNumber - 1)
             presentPerkDraft(
@@ -253,6 +253,13 @@ extension MainGameSceneViewModel {
         screenState = nil
     }
 
+//    LOSE SCreen
+    func presentLoseScreen() {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
+            screenState = .lose
+        }
+    }
+
     func restartGame() {
         coins = GameBalanceConfig.startingCoins
         waveNumber = 1
@@ -265,10 +272,8 @@ extension MainGameSceneViewModel {
         showHeroPickMenu = false
         showUpgradeMenu = false
         showArtifactMenu = false
-        showLoseScreen = false
         showRunVictoryScreen = false
         endlessModeActive = false
-        pendingVictoryAfterArtifact = false
         perkRerollsRemaining = 0
         perkSkipRewardCoins = 0
         waveEnemiesRemaining = 0
@@ -297,10 +302,11 @@ extension MainGameSceneViewModel {
 //  Колбеки з `GameScene`: монети, хвиля, дані панелі героя, прогрес ворогів, тап по слоту.
 
 extension MainGameSceneViewModel: GameHUDDelegate {
+//  MARK: Coin monitoring
     func gameScene(_ scene: GameScene, reportedCoinGain delta: Int) {
         coins += delta
     }
-
+  // MARK: Monitoring Waves
     func gameScene(
         _ scene: GameScene,
         reportedWaveState waveNumber: Int,
@@ -311,20 +317,24 @@ extension MainGameSceneViewModel: GameHUDDelegate {
         self.canStartWave = canStartWave
         self.isWaveRunning = isWaveRunning
     }
-
+  
+  // MARK: Check conditions for everything(Win, Artifcats, Upgrades)
     func gameScene(_ scene: GameScene, didFinishWave completedWaveIndex: Int) {
         if BossKind.forWaveNumber(completedWaveIndex) != nil {
-            if completedWaveIndex == 20, !endlessModeActive {
-                pendingVictoryAfterArtifact = true
+            if completedWaveIndex == 20 {
+                if !endlessModeActive {
+                    withAnimation {
+                        screenState = .win
+                    }
+                }
+                return
             }
             let choices = getRandomArtifacts()
             if !choices.isEmpty {
                 artifactChoices = choices
                 withAnimation {
-                    showArtifactMenu = true
+						screenState = .artifacts
                 }
-            } else {
-                resolvePendingVictoryIfNeeded()
             }
             return
         }
@@ -342,12 +352,14 @@ extension MainGameSceneViewModel: GameHUDDelegate {
         presentPerkDraft(mode: mode, skipRewardCompletedWave: completedWaveIndex, roles: nil)
     }
 
+//  MARK: Reroll Upgrades
     func rerollPerkDraft() {
         guard perkRerollsRemaining > 0 else { return }
         perkRerollsRemaining -= 1
         refillPerkDraftPool()
     }
 
+//  MARK: SKip Upgrade for money
     func skipPerkDraftForCoins() {
         guard showUpgradeMenu else { return }
         coins += perkSkipRewardCoins
@@ -356,11 +368,14 @@ extension MainGameSceneViewModel: GameHUDDelegate {
         }
         resetPerkDraftPresentation()
     }
-
+  
+// MARK: Endless mode
+//  TODO: Scale enemies more
     func continueRunEndless() {
         endlessModeActive = true
         withAnimation {
             showRunVictoryScreen = false
+            screenState = nil
         }
     }
 
@@ -395,15 +410,7 @@ extension MainGameSceneViewModel: GameHUDDelegate {
         perkDraftRoles = nil
     }
 
-    private func resolvePendingVictoryIfNeeded() {
-        guard pendingVictoryAfterArtifact else { return }
-        pendingVictoryAfterArtifact = false
-        guard !endlessModeActive else { return }
-        withAnimation {
-            showRunVictoryScreen = true
-        }
-    }
-
+//  MARK: Monitoring heroes
     func gameScene(
         _ scene: GameScene,
         reportedHeroPanelData currentHP: Double,
@@ -419,17 +426,20 @@ extension MainGameSceneViewModel: GameHUDDelegate {
         )
     }
 
+//   MARK: Monitoring Enemies (total and remaining)
     func gameScene(_ scene: GameScene, reportedWaveEnemyProgress remaining: Int, total: Int) {
         waveEnemiesRemaining = remaining
         waveEnemiesTotal = total
     }
 
+//   MARK: Monitoring Boss HP
     func gameScene(_ scene: GameScene, reportedBossHP current: Double, totalBossHP: Double) {
         currentBossHP = current
         self.totalBossHP = totalBossHP
         activeBossKind = totalBossHP > 0 ? BossKind.forWaveNumber(waveNumber) : nil
     }
 
+//  MARK: Moving heroes
     func gameScene(_ scene: GameScene, didMoveHeroFrom fromSlot: Int, to toSlot: Int) {
         guard !isWaveRunning else { return }
         guard fromSlot != toSlot else { return }
@@ -447,22 +457,26 @@ extension MainGameSceneViewModel: GameHUDDelegate {
             gameScene.setHighlightedSlot(toSlot)
         }
     }
-
+  
+//  MARK: Selecting Slot
+//  For HeroPick or HeroSelect
     func gameScene(_ scene: GameScene, reportedSlotTap slot: Int, isOccupied: Bool) {
         let sl = min(max(slot, 0), SceneLayout.heroSlotCount - 1)
+//		if is Occupied -> to heroselect
         if isOccupied {
-            if panelSlot == sl && showHeroPanel {
-                showHeroPanel = false
+//			 if pressed on the same hero then closing menu
+			 if panelSlot == sl && screenState == .heroSelection {
+                screenState = nil
                 panelSlot = nil
                 gameScene.setHUDStatsSlot(nil)
                 gameScene.setHighlightedSlot(nil)
-            } else {
+            } else { // if not the selected hero then just swaping or selecting hero
                 panelSlot = sl
                 gameScene.setHUDStatsSlot(sl)
                 gameScene.setHighlightedSlot(sl)
 						screenState = .heroSelection
             }
-        } else {
+		  } else { // If slot is empty pop up hero selection
             if isWaveRunning { return }
             panelSlot = nil
             gameScene.setHUDStatsSlot(nil)

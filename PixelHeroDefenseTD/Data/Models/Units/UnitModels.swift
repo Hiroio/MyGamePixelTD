@@ -62,7 +62,7 @@ struct HeroCombatStats: Sendable {
   static func knightPrototype() -> HeroCombatStats {
 	 HeroCombatStats(
 		baseDamage: 12,
-		baseHP: 100,
+		baseHP: 120,
 		attackSpeed: 1.0,
 		range: 40,
 		currentLevel: 1,
@@ -71,7 +71,7 @@ struct HeroCombatStats: Sendable {
   }
   static func archerPrototype() -> HeroCombatStats {
 	 HeroCombatStats(
-		baseDamage: 12,
+		baseDamage: 15,
 		baseHP: 100,
 		attackSpeed: 1.2,
 		range: 110,

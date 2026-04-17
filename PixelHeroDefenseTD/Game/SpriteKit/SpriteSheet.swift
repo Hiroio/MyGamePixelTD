@@ -36,4 +36,23 @@ enum SpriteSheet {
         }
         return frames
     }
+
+    /// Окремі imageset-и з іменами `BaseName1` … `BaseNameN` (як у FinaleBoss).
+    static func sequentialNamedTextures(
+        baseName: String,
+        startIndex: Int = 1,
+        endIndex: Int,
+        filteringMode: SKTextureFilteringMode = .nearest
+    ) -> [SKTexture] {
+        guard endIndex >= startIndex else { return [] }
+        var frames: [SKTexture] = []
+        for i in startIndex...endIndex {
+            let texture = SKTexture(imageNamed: "\(baseName)\(i)")
+            if texture.size().width > 0.5 {
+                texture.filteringMode = filteringMode
+                frames.append(texture)
+            }
+        }
+        return frames
+    }
 }

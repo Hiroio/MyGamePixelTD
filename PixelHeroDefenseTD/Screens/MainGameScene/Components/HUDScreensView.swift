@@ -44,7 +44,10 @@ struct HUDScreensView: View {
 			 )
 			 .transition(.opacity)
 		  case .win:
-			 RunVictoryScreen(onContinueEndless: {}, onRestart: {})
+			 RunVictoryScreen(
+				onContinueEndless: { vm.continueRunEndless() },
+				onRestart: { vm.restartGame() }
+			 )
 		  default:
 			 EmptyView()
 		  }
@@ -89,7 +92,7 @@ struct HUDScreensView: View {
 			 showUpgrade: true,
 			 upgradeCost: vm.nextUpgradeCost,
 			 canUpgrade: vm.canAffordUpgrade,
-			 onUpgrade: { vm.upgradeKnight(hero: hero) }
+			 onUpgrade: { vm.upgradeHero(hero: hero) }
 		  )
 		}
 	 }
